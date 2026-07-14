@@ -340,7 +340,39 @@ dialog::backdrop { background: rgba(0,0,0,0.6); }
     padding: 4px;
   }
 
-  dialog { width: calc(100vw - 24px); max-width: 520px; max-height: 90dvh; overflow-y: auto; }
-  .field-grid input, .field-grid select { min-height: 38px; font-size: 15px; }
+  /* dialogs become bottom sheets: close action within thumb reach */
+  dialog {
+    position: fixed;
+    margin: 0;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-width: 100%;
+    max-height: 86dvh;
+    overflow-y: auto;
+    border-radius: 16px 16px 0 0;
+    border-bottom: none;
+    padding-bottom: calc(14px + env(safe-area-inset-bottom));
+  }
+  .close-bottom {
+    position: sticky;
+    bottom: 0;
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+    margin-top: 12px;
+    min-height: 46px;
+    font-size: 15px;
+    font-weight: 600;
+    box-shadow: 0 -8px 16px rgba(31,34,41,0.9);
+  }
+  .dlg-head .small { display: none; } /* top close replaced by bottom button */
+
+  /* 16px+ inputs stop iOS from auto-zooming (which made the page pannable) */
+  .field-grid input, .field-grid select { min-height: 40px; font-size: 16px; }
+  .palette-row input[type="text"] { font-size: 16px; min-height: 36px; }
+  #panel { overflow-x: hidden; }
   button.small { min-height: 34px; }
 }

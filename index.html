@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
 <meta name="theme-color" content="#16181d">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -131,6 +131,7 @@
   </div>
   <div id="presetGrid"></div>
   <label class="custom-color">Custom color <input type="color" id="customColor" value="#c62828"></label>
+  <button id="closeColorB" class="primary mobile-only close-bottom">Done</button>
 </dialog>
 
 <dialog id="templatesDlg">
@@ -140,6 +141,7 @@
   </div>
   <p class="dlg-hint">Loads as a starting point — everything stays editable (and undoable).</p>
   <div id="templateGrid"></div>
+  <button id="closeTemplatesB" class="primary mobile-only close-bottom">Close</button>
 </dialog>
 
 <dialog id="previewDlg">
@@ -157,6 +159,7 @@
     <button id="download" class="primary">Download .gcode</button>
     <button id="share" class="primary" hidden>Share…</button>
   </div>
+  <button id="closePreviewB" class="mobile-only close-bottom">Close</button>
 </dialog>
 
 <script type="module" src="app.js"></script>

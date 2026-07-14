@@ -219,6 +219,7 @@ $('baseSwatch').onclick = () => openColorEditor({ type: 'base' });
 $('baseColorName').oninput = e => { state.baseColor.name = e.target.value; scheduleSave(); };
 
 // ---------- Color editor (presets + custom picker) ----------
+// Edit this list to match your filament supplier's colors: ['Name', '#hex']
 const PRESETS = [
   ['White', '#f4f2ec'], ['Cream', '#f1e8d0'], ['Silver', '#c9cdd3'], ['Gray', '#8a8f98'], ['Black', '#2b2b2e'],
   ['Red', '#c62828'], ['Orange', '#ef7d1a'], ['Yellow', '#f2c230'], ['Gold', '#d4a017'], ['Lime', '#8bc34a'],
@@ -264,6 +265,7 @@ function openColorEditor(target) {
     }
     $('customColor').oninput = e => applyEditedColor(e.target.value, null);
     $('closeColor').onclick = () => $('colorDlg').close();
+    $('closeColorB').onclick = () => $('colorDlg').close();
   }
   const current = target.type === 'base' ? state.baseColor : state.palette[target.idx];
   $('colorDlgTitle').textContent = target.type === 'base'
@@ -541,6 +543,7 @@ $('templates').onclick = () => {
   $('templatesDlg').showModal();
 };
 $('closeTemplates').onclick = () => $('templatesDlg').close();
+$('closeTemplatesB').onclick = () => $('templatesDlg').close();
 
 // ---------- Save / load ----------
 function designJSON() {
@@ -715,6 +718,7 @@ function drawPreview() {
 $('layerSlider').oninput = drawPreview;
 $('showTravel').onchange = drawPreview;
 $('closePreview').onclick = () => $('previewDlg').close();
+$('closePreviewB').onclick = () => $('previewDlg').close();
 
 $('download').onclick = () => {
   if (!lastResult) return;
