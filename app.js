@@ -102,15 +102,22 @@ function updateHud() {
 
 // ---------- Palette UI ----------
 function renderPalette() {
+  $('baseSwatch').style.background = state.baseColor.hex;
   const list = $('paletteList');
   list.innerHTML = '';
   state.palette.forEach((col, i) => {
     const row = document.createElement('div');
     row.className = 'palette-row' + (state.selected === i ? ' selected' : '');
-    const swatch = document.createElement('input');
-    swatch.type = 'color';
-    swatch.value = col.hex;
-    swatch.oninput = () => { col.hex = swatch.value; render(); scheduleSave(); };
+    const swatch = document.createElement('button');
+    swatch.className = 'swatch';
+    swatch.style.background = col.hex;
+    swatch.title = 'Tap to change color';
+    swatch.onclick = (e) => {
+      e.stopPropagation();
+      state.selected = i;
+      renderPalette();
+      openColorEditor({ type: 'palette', idx: i });
+    };
     const name = document.createElement('input');
     name.type = 'text';
     name.value = col.name;
@@ -165,6 +172,9 @@ function renderPaletteCounts() {
 
 function removeColor(i) {
   if (state.palette.length <= 1) return alert('Keep at least one color.');
+  let used = 0;
+  for (const v of state.cells) if (v === i + 1) used++;
+  if (used && !confirm(`Remove ${state.palette[i].name}? Its ${used} stitches will be erased. (Undo brings everything back.)`)) return;
   pushUndo();
   for (let k = 0; k < state.cells.length; k++) {
     const v = state.cells[k];
@@ -180,17 +190,100 @@ function removeColor(i) {
 
 $('addColor').onclick = () => {
   if (state.palette.length >= 16) return alert('16 colors max.');
+  pushUndo();
   state.palette.push({ name: `Color ${state.palette.length + 1}`, hex: '#7e57c2' });
   state.selected = state.palette.length - 1;
   renderPalette();
   scheduleSave();
+  openColorEditor({ type: 'palette', idx: state.selected });
 };
-$('baseColorHex').oninput = e => { state.baseColor.hex = e.target.value; render(); scheduleSave(); };
+const DEFAULT_PALETTE = [
+  { name: 'Red', hex: '#c62828' },
+  { name: 'Yellow', hex: '#f2c230' },
+  { name: 'Green', hex: '#5aa73c' },
+];
+$('resetPalette').onclick = () => {
+  pushUndo();
+  state.palette = DEFAULT_PALETTE.map(c => ({ ...c }));
+  state.baseColor = { name: 'Cream', hex: '#f1e8d0' };
+  for (let k = 0; k < state.cells.length; k++) {
+    if (state.cells[k] > state.palette.length) state.cells[k] = 0;
+  }
+  state.selected = 0;
+  $('baseColorName').value = state.baseColor.name;
+  renderPalette();
+  render();
+  scheduleSave();
+};
+$('baseSwatch').onclick = () => openColorEditor({ type: 'base' });
 $('baseColorName').oninput = e => { state.baseColor.name = e.target.value; scheduleSave(); };
 
-// ---------- Undo ----------
+// ---------- Color editor (presets + custom picker) ----------
+const PRESETS = [
+  ['White', '#f4f2ec'], ['Cream', '#f1e8d0'], ['Silver', '#c9cdd3'], ['Gray', '#8a8f98'], ['Black', '#2b2b2e'],
+  ['Red', '#c62828'], ['Orange', '#ef7d1a'], ['Yellow', '#f2c230'], ['Gold', '#d4a017'], ['Lime', '#8bc34a'],
+  ['Green', '#5aa73c'], ['Forest', '#2e6b34'], ['Teal', '#2f8f83'], ['Cyan', '#3ab5d0'], ['Blue', '#3a6fd8'],
+  ['Navy', '#2b4a7a'], ['Purple', '#7e57c2'], ['Magenta', '#c2419b'], ['Pink', '#e57fa4'], ['Blush', '#f2a7c3'],
+  ['Brown', '#7a5230'], ['Tan', '#c9a87b'],
+];
+let colorTarget = null;
+let presetsBuilt = false;
+
+function applyEditedColor(hex, name) {
+  if (!colorTarget) return;
+  if (colorTarget.type === 'base') {
+    state.baseColor.hex = hex;
+    if (name) { state.baseColor.name = name; $('baseColorName').value = name; }
+  } else {
+    const col = state.palette[colorTarget.idx];
+    if (!col) return;
+    col.hex = hex;
+    if (name) col.name = name;
+  }
+  renderPalette();
+  render();
+  scheduleSave();
+}
+
+function openColorEditor(target) {
+  colorTarget = target;
+  if (!presetsBuilt) {
+    presetsBuilt = true;
+    const grid = $('presetGrid');
+    for (const [name, hex] of PRESETS) {
+      const b = document.createElement('button');
+      b.className = 'preset';
+      const pc = document.createElement('div');
+      pc.className = 'pc';
+      pc.style.background = hex;
+      const label = document.createElement('span');
+      label.textContent = name;
+      b.append(pc, label);
+      b.onclick = () => applyEditedColor(hex, name);
+      grid.appendChild(b);
+    }
+    $('customColor').oninput = e => applyEditedColor(e.target.value, null);
+    $('closeColor').onclick = () => $('colorDlg').close();
+  }
+  const current = target.type === 'base' ? state.baseColor : state.palette[target.idx];
+  $('colorDlgTitle').textContent = target.type === 'base'
+    ? 'Mesh (canvas) color' : `Color: ${current.name}`;
+  $('customColor').value = current.hex;
+  $('colorDlg').showModal();
+}
+
+// ---------- Undo (covers cells, grid size, palette, and base color) ----------
+function snapshot() {
+  return {
+    cells: state.cells.slice(),
+    cols: state.cols,
+    rows: state.rows,
+    palette: state.palette.map(c => ({ ...c })),
+    baseColor: { ...state.baseColor },
+  };
+}
 function pushUndo() {
-  undoStack.push({ cells: state.cells.slice(), cols: state.cols, rows: state.rows });
+  undoStack.push(snapshot());
   if (undoStack.length > 100) undoStack.shift();
   redoStack.length = 0;
 }
@@ -198,19 +291,24 @@ function applySnapshot(s) {
   state.cells = s.cells.slice();
   state.cols = s.cols;
   state.rows = s.rows;
+  state.palette = s.palette.map(c => ({ ...c }));
+  state.baseColor = { ...s.baseColor };
+  if (state.selected >= state.palette.length) state.selected = Math.max(0, state.palette.length - 1);
   $('cols').value = s.cols;
   $('rows').value = s.rows;
+  $('baseColorName').value = state.baseColor.name;
+  renderPalette();
   render();
   scheduleSave();
 }
 $('undo').onclick = () => {
   if (!undoStack.length) return;
-  redoStack.push({ cells: state.cells.slice(), cols: state.cols, rows: state.rows });
+  redoStack.push(snapshot());
   applySnapshot(undoStack.pop());
 };
 $('redo').onclick = () => {
   if (!redoStack.length) return;
-  undoStack.push({ cells: state.cells.slice(), cols: state.cols, rows: state.rows });
+  undoStack.push(snapshot());
   applySnapshot(redoStack.pop());
 };
 document.addEventListener('keydown', e => {
@@ -469,7 +567,6 @@ function loadDesignObj(d) {
   $('rows').value = d.rows;
   if (d.pitch) $('pitch').value = d.pitch;
   if (d.printerId && PRINTERS[d.printerId]) $('printer').value = d.printerId;
-  $('baseColorHex').value = state.baseColor.hex;
   $('baseColorName').value = state.baseColor.name;
   renderPalette();
   render();
@@ -645,6 +742,17 @@ try {
   const saved = localStorage.getItem('pixelpainting.design');
   if (saved) loadDesignObj(JSON.parse(saved));
 } catch {}
+
+// start at a zoom that fits the whole grid on screen (matters on phones)
+function fitZoom() {
+  const z = Math.floor(Math.min(
+    (wrap.clientWidth - 24) / state.cols,
+    (wrap.clientHeight - 24) / state.rows
+  ));
+  state.zoom = Math.max(6, Math.min(34, z || 16));
+  $('zoom').value = state.zoom;
+}
+fitZoom();
 
 renderPalette();
 render();

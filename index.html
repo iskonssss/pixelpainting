@@ -32,12 +32,15 @@
     <section>
       <h2>Palette</h2>
       <div class="palette-row" id="baseColorRow">
-        <input type="color" id="baseColorHex" value="#f1e8d0" title="Mesh (canvas) color">
+        <button id="baseSwatch" class="swatch" title="Mesh (canvas) color — tap to change"></button>
         <input type="text" id="baseColorName" value="Cream" title="Base filament name">
         <span class="tag">mesh</span>
       </div>
       <div id="paletteList"></div>
-      <button id="addColor" class="small">+ Add color</button>
+      <div class="tool-row">
+        <button id="addColor" class="small">+ Add color</button>
+        <button id="resetPalette" class="small">↺ Reset palette</button>
+      </div>
     </section>
 
     <section>
@@ -120,6 +123,15 @@
     </div>
   </section>
 </main>
+
+<dialog id="colorDlg">
+  <div class="dlg-head">
+    <h2 id="colorDlgTitle">Pick a color</h2>
+    <button id="closeColor" class="small">Done</button>
+  </div>
+  <div id="presetGrid"></div>
+  <label class="custom-color">Custom color <input type="color" id="customColor" value="#c62828"></label>
+</dialog>
 
 <dialog id="templatesDlg">
   <div class="dlg-head">
