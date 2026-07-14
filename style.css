@@ -15,10 +15,14 @@ body {
   background: var(--bg);
   color: var(--text);
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  overscroll-behavior: none;
 }
+
+.mobile-only { display: none; }
 
 header {
   padding: 10px 18px;
@@ -58,6 +62,13 @@ button {
   padding: 6px 10px;
   cursor: pointer;
   font-size: 13px;
+  touch-action: manipulation;
+}
+button.accent {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
 }
 button:hover { border-color: var(--accent); }
 button.active { border-color: var(--accent); background: #2a3550; }
@@ -137,7 +148,13 @@ details summary { cursor: pointer; color: var(--muted); font-size: 12px; margin:
   place-items: center;
   padding: 20px;
 }
-#grid { background: #faf7ef; border-radius: 3px; box-shadow: 0 4px 24px rgba(0,0,0,0.45); cursor: crosshair; }
+#grid {
+  background: #faf7ef;
+  border-radius: 3px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.45);
+  cursor: crosshair;
+  touch-action: none;
+}
 #hud {
   flex: 0 0 auto;
   padding: 8px 16px;
@@ -169,4 +186,90 @@ dialog::backdrop { background: rgba(0,0,0,0.6); }
   font-size: 12px;
   white-space: pre-wrap;
   margin-bottom: 10px;
+}
+.dlg-actions { display: flex; gap: 8px; }
+.dlg-actions .primary { flex: 1; }
+
+/* ---------- Mobile layout ---------- */
+@media (max-width: 820px), (pointer: coarse) and (max-width: 1100px) {
+  .mobile-only { display: flex; }
+  header { padding: 8px 12px; align-items: center; }
+  .subtitle { display: none; }
+  .header-actions { margin-left: auto; gap: 8px; }
+  .header-actions button { min-height: 36px; }
+
+  /* settings panel becomes a bottom sheet */
+  #panel {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    width: 100%;
+    max-height: 78vh;
+    border-right: none;
+    border-top: 1px solid var(--border);
+    border-radius: 16px 16px 0 0;
+    transform: translateY(105%);
+    transition: transform 0.25s ease;
+    z-index: 30;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    box-shadow: 0 -8px 32px rgba(0,0,0,0.5);
+  }
+  #panel.open { transform: none; }
+  #sheetBackdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 25;
+  }
+  #sheetBackdrop.open { display: block; }
+  .sheet-head {
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    position: sticky;
+    top: -12px;
+    background: var(--panel);
+    padding: 6px 0;
+  }
+  /* hide desktop-only duplicates inside the sheet */
+  #panel .tool-row .tool { display: none; }
+
+  #canvasWrap { padding: 12px; }
+  #hud { font-size: 11px; padding: 5px 10px; text-align: center; }
+
+  #mobileBar {
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border);
+    background: var(--panel);
+  }
+  #paletteChips {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 2px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .chip {
+    flex: 0 0 auto;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    border: 2px solid var(--border);
+    padding: 0;
+  }
+  .chip.selected { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(79,140,255,0.4); }
+  .chip.add { background: var(--panel2); color: var(--muted); font-size: 18px; }
+  .bar-tools { display: flex; gap: 6px; }
+  .bar-tools button {
+    flex: 1;
+    min-height: 42px;
+    font-size: 17px;
+    padding: 4px;
+  }
+
+  dialog { width: calc(100vw - 24px); max-width: 520px; max-height: 90dvh; overflow-y: auto; }
+  .field-grid input, .field-grid select { min-height: 38px; font-size: 15px; }
+  button.small { min-height: 34px; }
 }

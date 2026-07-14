@@ -42,6 +42,44 @@ python3 -m http.server 8000   # or any static server
 3. Click **Generate G-code** to see a layer-by-layer toolpath preview, filament/time estimates,
    and download the `.gcode` file.
 
+## Using it on your phone
+
+The app is mobile-optimized and installable as a PWA:
+
+- **Install as an app**: open the site in Safari (iOS) or Chrome (Android) and use
+  *Share → Add to Home Screen* / *Install app*. It launches full-screen with its own icon
+  and works offline.
+- **Touch controls**: one finger paints, two fingers pinch-zoom and pan. Tools and the
+  color palette live in the bottom bar; grid and print settings are behind the ⚙️ button.
+- **Getting the file out**: after generating, tap **Share…** to use the native share sheet
+  (AirDrop it to a computer, save to Files, etc.) or **Download**.
+
+Note: the PWA needs to be served over HTTPS (or localhost) for install/offline to work —
+GitHub Pages is an easy free option for hosting it.
+
+## Sending straight to the printer (LAN)
+
+Browsers can't open the raw FTPS/MQTT sockets Bambu printers use, so a phone browser can't
+upload directly. The included companion script does it from any computer (or a Raspberry Pi)
+on the same network:
+
+```sh
+npm install   # once, for basic-ftp + mqtt
+
+# upload only — then start it from the printer screen (Files → SD card):
+npm run send -- --ip 192.168.1.50 --code 12345678 bookmark.gcode
+
+# upload AND start the print (experimental — clear the bed first!):
+npm run send -- --ip 192.168.1.50 --code 12345678 --serial 01P00A123456789 --start bookmark.gcode
+```
+
+- Enable **LAN Mode** on the printer (newer firmware may also require **Developer Mode**
+  for the `--start` MQTT command). The access code is on the printer's network settings screen.
+- This uses the same community LAN protocol as OrcaSlicer/Home Assistant integrations;
+  firmware updates can change behavior, so treat `--start` as experimental.
+- Phone-only workflow: share the file from the PWA to a machine running the script, or run
+  the script on an always-on box (Pi) watching a synced folder.
+
 ## Printing on a Bambu printer
 
 1. Copy the `.gcode` file to the printer's SD card / USB storage and start it from the printer
@@ -67,5 +105,7 @@ node test/gcode.test.mjs   # generator sanity tests for all printers
 ```
 
 - `gcode.js` — toolpath + G-code generation (pure, also runs under Node)
-- `app.js` — grid editor UI
-- `index.html`, `style.css` — static page
+- `app.js` — grid editor UI (mouse + touch)
+- `index.html`, `style.css` — static page, responsive desktop/mobile layouts
+- `manifest.json`, `sw.js`, `icon-*.png` — PWA install + offline support
+- `tools/send-to-bambu.mjs` — LAN upload/start companion script

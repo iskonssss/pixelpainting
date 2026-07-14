@@ -2,7 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#16181d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>PixelPainting — cross-stitch bookmark G-code generator</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔖</text></svg>">
 <link rel="stylesheet" href="style.css">
@@ -11,10 +16,19 @@
 <header>
   <h1>PixelPainting</h1>
   <span class="subtitle">3D-printed cross-stitch bookmark G-code generator for Bambu Lab</span>
+  <div class="header-actions mobile-only">
+    <button id="generateM" class="small accent">G-code</button>
+    <button id="openSettings" class="small" title="Settings">⚙️</button>
+  </div>
 </header>
 
 <main>
+  <div id="sheetBackdrop"></div>
   <aside id="panel">
+    <div class="sheet-head mobile-only">
+      <strong>Settings</strong>
+      <button id="closeSettings" class="small">Done</button>
+    </div>
     <section>
       <h2>Palette</h2>
       <div class="palette-row" id="baseColorRow">
@@ -93,6 +107,17 @@
   <section id="editor">
     <div id="canvasWrap"><canvas id="grid"></canvas></div>
     <div id="hud"></div>
+    <div id="mobileBar" class="mobile-only">
+      <div id="paletteChips"></div>
+      <div class="bar-tools">
+        <button class="tool active" data-tool="paint" title="Paint">✏️</button>
+        <button class="tool" data-tool="erase" title="Erase">🧽</button>
+        <button class="tool" data-tool="fill" title="Fill">🪣</button>
+        <button class="tool" data-tool="pick" title="Pick">💧</button>
+        <button id="undoM" title="Undo">↩</button>
+        <button id="redoM" title="Redo">↪</button>
+      </div>
+    </div>
   </section>
 </main>
 
@@ -107,7 +132,10 @@
     <label class="checkbox"><input type="checkbox" id="showTravel"> Show travel moves</label>
   </div>
   <pre id="statsBox"></pre>
-  <button id="download" class="primary">Download .gcode</button>
+  <div class="dlg-actions">
+    <button id="download" class="primary">Download .gcode</button>
+    <button id="share" class="primary" hidden>Share…</button>
+  </div>
 </dialog>
 
 <script type="module" src="app.js"></script>

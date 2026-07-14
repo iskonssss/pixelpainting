@@ -130,7 +130,28 @@ function renderPalette() {
     row.append(swatch, name, count, del);
     list.appendChild(row);
   });
+  renderPaletteChips();
   renderPaletteCounts();
+}
+
+function renderPaletteChips() {
+  const chips = $('paletteChips');
+  if (!chips) return;
+  chips.innerHTML = '';
+  state.palette.forEach((col, i) => {
+    const b = document.createElement('button');
+    b.className = 'chip' + (i === state.selected ? ' selected' : '');
+    b.style.background = col.hex;
+    b.title = col.name;
+    b.onclick = () => { state.selected = i; renderPalette(); };
+    chips.appendChild(b);
+  });
+  const add = document.createElement('button');
+  add.className = 'chip add';
+  add.textContent = '+';
+  add.title = 'Add color';
+  add.onclick = () => $('addColor').click();
+  chips.appendChild(add);
 }
 
 function renderPaletteCounts() {
@@ -196,9 +217,12 @@ document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'y') { e.preventDefault(); $('redo').click(); }
 });
 
-// ---------- Painting ----------
+// ---------- Painting (mouse + touch; two-finger pinch zooms/pans) ----------
 let painting = false;
 let paintErase = false;
+const pointers = new Map();
+let pinch = null;
+const wrap = $('canvasWrap');
 
 function cellAt(e) {
   const rect = canvas.getBoundingClientRect();
@@ -206,6 +230,15 @@ function cellAt(e) {
   const r = Math.floor((e.clientY - rect.top) / state.zoom);
   if (c < 0 || c >= state.cols || r < 0 || r >= state.rows) return null;
   return { r, c };
+}
+
+// A second finger landing mid-stroke means the user wanted to pinch, not paint:
+// roll back the stroke that just started.
+function cancelStroke() {
+  if (!painting) return;
+  painting = false;
+  const snap = undoStack.pop();
+  if (snap) { state.cells = snap.cells.slice(); render(); }
 }
 
 function paintCell(cell, erase) {
@@ -234,6 +267,20 @@ function floodFill(cell) {
 
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 canvas.addEventListener('pointerdown', e => {
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 2) {
+    cancelStroke();
+    const [a, b] = [...pointers.values()];
+    const rect = wrap.getBoundingClientRect();
+    pinch = {
+      d0: Math.hypot(a.x - b.x, a.y - b.y) || 1,
+      zoom0: state.zoom,
+      cx: wrap.scrollLeft + (a.x + b.x) / 2 - rect.left,
+      cy: wrap.scrollTop + (a.y + b.y) / 2 - rect.top,
+    };
+    return;
+  }
+  if (pointers.size > 1) return;
   const cell = cellAt(e);
   if (!cell) return;
   const erase = e.button === 2 || state.tool === 'erase';
@@ -250,18 +297,50 @@ canvas.addEventListener('pointerdown', e => {
   paintCell(cell, erase);
 });
 canvas.addEventListener('pointermove', e => {
+  const p = pointers.get(e.pointerId);
+  if (p) { p.x = e.clientX; p.y = e.clientY; }
+  if (pinch && pointers.size >= 2) {
+    const [a, b] = [...pointers.values()];
+    const d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+    const z = Math.max(6, Math.min(34, Math.round(pinch.zoom0 * d / pinch.d0)));
+    if (z !== state.zoom) { state.zoom = z; $('zoom').value = z; render(); }
+    const rect = wrap.getBoundingClientRect();
+    const scale = state.zoom / pinch.zoom0;
+    wrap.scrollLeft = pinch.cx * scale - ((a.x + b.x) / 2 - rect.left);
+    wrap.scrollTop = pinch.cy * scale - ((a.y + b.y) / 2 - rect.top);
+    return;
+  }
   if (!painting) return;
   const cell = cellAt(e);
   if (cell) paintCell(cell, paintErase);
 });
-canvas.addEventListener('pointerup', () => { painting = false; scheduleSave(); });
+const endPointer = e => {
+  pointers.delete(e.pointerId);
+  if (pointers.size < 2) pinch = null;
+  if (painting && pointers.size === 0) { painting = false; scheduleSave(); }
+};
+canvas.addEventListener('pointerup', endPointer);
+canvas.addEventListener('pointercancel', endPointer);
 
 document.querySelectorAll('.tool').forEach(btn => {
   btn.onclick = () => {
     state.tool = btn.dataset.tool;
-    document.querySelectorAll('.tool').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.tool').forEach(b =>
+      b.classList.toggle('active', b.dataset.tool === state.tool));
   };
 });
+$('undoM').onclick = () => $('undo').click();
+$('redoM').onclick = () => $('redo').click();
+
+// ---------- Mobile settings sheet ----------
+function openSheet(open) {
+  $('panel').classList.toggle('open', open);
+  $('sheetBackdrop').classList.toggle('open', open);
+}
+$('openSettings').onclick = () => openSheet(true);
+$('closeSettings').onclick = () => openSheet(false);
+$('sheetBackdrop').onclick = () => openSheet(false);
+$('generateM').onclick = () => { openSheet(false); $('generate').click(); };
 
 // ---------- Grid resize / zoom ----------
 function resizeGrid(cols, rows) {
@@ -459,9 +538,21 @@ $('generate').onclick = () => {
     st.byColor.map(c => `  • ${c.name}: ${c.count} stitches`).join('\n') + '\n' +
     `filament ≈ ${(st.filamentMM / 1000).toFixed(2)} m (${st.filamentG.toFixed(1)} g)\n` +
     `print time ≈ ${Math.round(st.timeMin)} min (moves only; excludes heat-up, leveling, pauses)`;
+  // native share sheet (mobile): lets you AirDrop / save / hand off the file
+  try {
+    const f = gcodeFile();
+    $('share').hidden = !(navigator.canShare && navigator.canShare({ files: [f] }));
+  } catch { $('share').hidden = true; }
   drawPreview();
   $('previewDlg').showModal();
 };
+
+function gcodeName() {
+  return `bookmark_${state.cols}x${state.rows}_${$('printer').value}.gcode`;
+}
+function gcodeFile() {
+  return new File([lastResult.gcode], gcodeName(), { type: 'text/plain' });
+}
 
 function drawPreview() {
   const cv = $('previewCanvas');
@@ -514,8 +605,15 @@ $('closePreview').onclick = () => $('previewDlg').close();
 
 $('download').onclick = () => {
   if (!lastResult) return;
-  const blob = new Blob([lastResult.gcode], { type: 'text/plain' });
-  downloadBlob(blob, `bookmark_${state.cols}x${state.rows}_${$('printer').value}.gcode`);
+  downloadBlob(new Blob([lastResult.gcode], { type: 'text/plain' }), gcodeName());
+};
+$('share').onclick = async () => {
+  if (!lastResult) return;
+  try {
+    await navigator.share({ files: [gcodeFile()], title: gcodeName() });
+  } catch (err) {
+    if (err.name !== 'AbortError') alert('Share failed: ' + err.message);
+  }
 };
 
 // ---------- Init ----------
@@ -535,3 +633,8 @@ try {
 renderPalette();
 render();
 if (![...state.cells].some(v => v)) $('demo').click();
+
+// PWA: offline app shell, installable on phones
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
