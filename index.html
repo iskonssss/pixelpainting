@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PixelPainting — cross-stitch bookmark G-code generator</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔖</text></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>PixelPainting</h1>
+  <span class="subtitle">3D-printed cross-stitch bookmark G-code generator for Bambu Lab</span>
+</header>
+
+<main>
+  <aside id="panel">
+    <section>
+      <h2>Palette</h2>
+      <div class="palette-row" id="baseColorRow">
+        <input type="color" id="baseColorHex" value="#f1e8d0" title="Mesh (canvas) color">
+        <input type="text" id="baseColorName" value="Cream" title="Base filament name">
+        <span class="tag">mesh</span>
+      </div>
+      <div id="paletteList"></div>
+      <button id="addColor" class="small">+ Add color</button>
+    </section>
+
+    <section>
+      <h2>Tools</h2>
+      <div class="tool-row">
+        <button data-tool="paint" class="tool active" title="Paint (drag). Right-click erases.">✏️ Paint</button>
+        <button data-tool="erase" class="tool" title="Erase">🧽 Erase</button>
+        <button data-tool="fill"  class="tool" title="Flood fill">🪣 Fill</button>
+        <button data-tool="pick"  class="tool" title="Pick color from a cell">💧 Pick</button>
+      </div>
+      <div class="tool-row">
+        <button id="undo" class="small" title="Ctrl+Z">↩ Undo</button>
+        <button id="redo" class="small" title="Ctrl+Y">↪ Redo</button>
+        <button id="clear" class="small">Clear</button>
+        <button id="demo" class="small">Demo pattern</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Grid</h2>
+      <div class="field-grid">
+        <label>Columns <input type="number" id="cols" min="4" max="120" value="28"></label>
+        <label>Rows <input type="number" id="rows" min="4" max="200" value="40"></label>
+        <label>Cell size (mm) <input type="number" id="pitch" min="1.5" max="5" step="0.05" value="2.25"></label>
+        <label>Zoom <input type="range" id="zoom" min="6" max="34" value="16"></label>
+      </div>
+    </section>
+
+    <section>
+      <h2>Print settings</h2>
+      <div class="field-grid">
+        <label>Printer
+          <select id="printer"></select>
+        </label>
+        <label>Nozzle °C <input type="number" id="nozzleTemp" min="180" max="300" value="220"></label>
+        <label>Bed °C <input type="number" id="bedTemp" min="0" max="110" value="60"></label>
+      </div>
+      <details>
+        <summary>Advanced</summary>
+        <div class="field-grid">
+          <label>Line width (mm) <input type="number" id="lineWidth" min="0.3" max="0.8" step="0.01" value="0.42"></label>
+          <label>First layer (mm) <input type="number" id="firstLayerHeight" min="0.15" max="0.35" step="0.01" value="0.25"></label>
+          <label>Layer height (mm) <input type="number" id="layerHeight" min="0.1" max="0.3" step="0.01" value="0.2"></label>
+          <label>Mesh layers <input type="number" id="meshLayers" min="2" max="8" value="4"></label>
+          <label>Stitch passes <input type="number" id="stitchLayers" min="1" max="4" value="2"></label>
+          <label>Stitch flow <input type="number" id="stitchFlow" min="0.8" max="1.6" step="0.05" value="1.15"></label>
+          <label>Brim loops <input type="number" id="brimLoops" min="0" max="8" value="3"></label>
+          <label>First speed (mm/s) <input type="number" id="speedFirst" min="10" max="100" value="30"></label>
+          <label>Mesh speed (mm/s) <input type="number" id="speedMesh" min="10" max="200" value="60"></label>
+          <label>Stitch speed (mm/s) <input type="number" id="speedStitch" min="10" max="100" value="30"></label>
+          <label class="checkbox"><input type="checkbox" id="bedLevel" checked> Bed leveling (G29)</label>
+        </div>
+      </details>
+    </section>
+
+    <section>
+      <h2>Actions</h2>
+      <button id="generate" class="primary">Generate G-code</button>
+      <div class="tool-row">
+        <button id="saveDesign" class="small">Save design</button>
+        <button id="loadDesign" class="small">Load design</button>
+        <input type="file" id="loadFile" accept=".json" hidden>
+      </div>
+    </section>
+  </aside>
+
+  <section id="editor">
+    <div id="canvasWrap"><canvas id="grid"></canvas></div>
+    <div id="hud"></div>
+  </section>
+</main>
+
+<dialog id="previewDlg">
+  <div class="dlg-head">
+    <h2>Toolpath preview</h2>
+    <button id="closePreview" class="small">✕</button>
+  </div>
+  <canvas id="previewCanvas" width="520" height="640"></canvas>
+  <div class="preview-controls">
+    <label>Layer <input type="range" id="layerSlider" min="0" max="0" value="0"> <span id="layerLabel"></span></label>
+    <label class="checkbox"><input type="checkbox" id="showTravel"> Show travel moves</label>
+  </div>
+  <pre id="statsBox"></pre>
+  <button id="download" class="primary">Download .gcode</button>
+</dialog>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
