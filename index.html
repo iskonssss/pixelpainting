@@ -52,7 +52,7 @@
         <button id="undo" class="small" title="Ctrl+Z">↩ Undo</button>
         <button id="redo" class="small" title="Ctrl+Y">↪ Redo</button>
         <button id="clear" class="small">Clear</button>
-        <button id="demo" class="small">Demo pattern</button>
+        <button id="templates" class="small">🎨 Templates</button>
       </div>
     </section>
 
@@ -120,6 +120,15 @@
     </div>
   </section>
 </main>
+
+<dialog id="templatesDlg">
+  <div class="dlg-head">
+    <h2>Choose a template</h2>
+    <button id="closeTemplates" class="small">✕</button>
+  </div>
+  <p class="dlg-hint">Loads as a starting point — everything stays editable (and undoable).</p>
+  <div id="templateGrid"></div>
+</dialog>
 
 <dialog id="previewDlg">
   <div class="dlg-head">

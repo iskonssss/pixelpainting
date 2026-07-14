@@ -1,5 +1,6 @@
 // app.js — grid editor UI for PixelPainting
 import { PRINTERS, DEFAULT_CFG, generateGcode } from './gcode.js';
+import { TEMPLATES } from './templates.js';
 
 const $ = id => document.getElementById(id);
 
@@ -373,60 +374,75 @@ $('clear').onclick = () => {
   scheduleSave();
 };
 
-// ---------- Demo pattern ----------
-const FLOWER = [
-  '..1..',
-  '.111.',
-  '11211',
-  '.111.',
-  '..1..',
-];
-const SMALL = [
-  '.1.',
-  '111',
-  '.1.',
-];
-function stamp(pattern, top, left, colorMap) {
-  pattern.forEach((row, dr) => {
-    [...row].forEach((ch, dc) => {
-      if (ch === '.') return;
-      const r = top + dr, c = left + dc;
-      if (r < 0 || r >= state.rows || c < 0 || c >= state.cols) return;
-      state.cells[r * state.cols + c] = colorMap[ch];
-    });
-  });
-}
-$('demo').onclick = () => {
+// ---------- Templates ----------
+function applyTemplate(tpl) {
   pushUndo();
-  state.cells.fill(0);
-  const red = 1, yellow = 2, green = 3;
-  while (state.palette.length < 3) $('addColor').click();
-  // stems
-  const stem = (r0, c0, r1, c1) => {
-    let r = r0, c = c0;
-    while (r !== r1 || c !== c1) {
-      state.cells[r * state.cols + c] = green;
-      if (r !== r1) r += Math.sign(r1 - r);
-      else c += Math.sign(c1 - c);
-    }
-    state.cells[r1 * state.cols + c1] = green;
-  };
-  const cx = Math.floor(state.cols / 2);
-  stem(6, cx, state.rows - 4, cx);
-  stem(12, cx, 12, cx - 6);
-  stem(20, cx, 20, cx + 6);
-  stem(28, cx, 28, cx - 7);
-  // flowers
-  stamp(FLOWER, 2, cx - 2, { 1: red, 2: yellow });
-  stamp(FLOWER, 9, cx - 9, { 1: yellow, 2: red });
-  stamp(FLOWER, 17, cx + 4, { 1: red, 2: yellow });
-  stamp(FLOWER, 25, cx - 10, { 1: yellow, 2: red });
-  stamp(SMALL, 33, cx - 4, { 1: red });
-  stamp(SMALL, 5, cx + 5, { 1: yellow });
-  stamp(SMALL, state.rows - 6, cx + 3, { 1: yellow });
+  if (tpl.palette) {
+    state.palette = tpl.palette.map(c => ({ ...c }));
+    state.selected = 0;
+  }
+  state.cells = tpl.build(state.cols, state.rows);
+  renderPalette();
   render();
   scheduleSave();
+}
+
+function drawTemplateThumb(cv, tpl) {
+  const cols = 28, rows = 40, px = 4;
+  cv.width = cols * px;
+  cv.height = rows * px;
+  const c2 = cv.getContext('2d');
+  c2.fillStyle = '#faf7ef';
+  c2.fillRect(0, 0, cv.width, cv.height);
+  c2.strokeStyle = '#efe7d2';
+  c2.lineWidth = 0.5;
+  c2.beginPath();
+  for (let c = 0; c <= cols; c += 2) { c2.moveTo(c * px, 0); c2.lineTo(c * px, rows * px); }
+  for (let r = 0; r <= rows; r += 2) { c2.moveTo(0, r * px); c2.lineTo(cols * px, r * px); }
+  c2.stroke();
+  const cells = tpl.build(cols, rows);
+  const pal = tpl.palette || state.palette;
+  c2.lineCap = 'round';
+  c2.lineWidth = 1.4;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const v = cells[r * cols + c];
+      if (!v || !pal[v - 1]) continue;
+      const x = c * px, y = r * px;
+      c2.strokeStyle = pal[v - 1].hex;
+      c2.beginPath();
+      c2.moveTo(x + 0.5, y + 0.5);
+      c2.lineTo(x + px - 0.5, y + px - 0.5);
+      c2.moveTo(x + px - 0.5, y + 0.5);
+      c2.lineTo(x + 0.5, y + px - 0.5);
+      c2.stroke();
+    }
+  }
+}
+
+let galleryBuilt = false;
+$('templates').onclick = () => {
+  if (!galleryBuilt) {
+    galleryBuilt = true;
+    const grid = $('templateGrid');
+    for (const tpl of TEMPLATES) {
+      const card = document.createElement('button');
+      card.className = 'tpl';
+      const cv = document.createElement('canvas');
+      drawTemplateThumb(cv, tpl);
+      const label = document.createElement('span');
+      label.textContent = tpl.name;
+      card.append(cv, label);
+      card.onclick = () => {
+        applyTemplate(tpl);
+        $('templatesDlg').close();
+      };
+      grid.appendChild(card);
+    }
+  }
+  $('templatesDlg').showModal();
 };
+$('closeTemplates').onclick = () => $('templatesDlg').close();
 
 // ---------- Save / load ----------
 function designJSON() {
@@ -632,7 +648,9 @@ try {
 
 renderPalette();
 render();
-if (![...state.cells].some(v => v)) $('demo').click();
+if (![...state.cells].some(v => v)) {
+  applyTemplate(TEMPLATES.find(t => t.id === 'wildflowers'));
+}
 
 // PWA: offline app shell, installable on phones
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
