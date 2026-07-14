@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - claude/bookmark-gcode-generator-lwf51l
   workflow_dispatch:
 
 permissions:
