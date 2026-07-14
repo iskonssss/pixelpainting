@@ -39,6 +39,12 @@ for (const printerId of Object.keys(PRINTERS)) {
   check('stitch count', stats.stitchCount === 28 + 16 + 1, `got ${stats.stitchCount}`);
   check('per-color counts', stats.byColor.map(c => c.count).join(',') === '28,16,1');
   check('filament positive', stats.filamentMM > 0 && stats.filamentG > 0);
+  check('base filament tracked', stats.base.filamentMM > 0);
+  check('per-color filament tracked', stats.byColor.every(c => c.filamentMM > 0 && c.filamentG > 0));
+  const sumParts = stats.base.filamentMM + stats.byColor.reduce((s, c) => s + c.filamentMM, 0);
+  check('per-color filament sums to total', Math.abs(sumParts - stats.filamentMM) < 0.01,
+    `${sumParts} vs ${stats.filamentMM}`);
+  check('header has filament summary', /; Filament needed/.test(gcode));
   check('preview has segments', segs.length > 500, `got ${segs.length}`);
 
   // all coordinates within bed

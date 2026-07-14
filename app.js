@@ -647,12 +647,18 @@ $('generate').onclick = () => {
   $('layerSlider').max = previewLayers.length - 1;
   $('layerSlider').value = previewLayers.length - 1;
   const st = lastResult.stats;
+  const len = mm => mm >= 1000 ? `${(mm / 1000).toFixed(2)} m` : `${Math.round(mm)} mm`;
+  const colorLines = [
+    `  • ${st.base.name} (mesh): ${len(st.base.filamentMM)} (${st.base.filamentG.toFixed(1)} g)`,
+    ...st.byColor.map(c =>
+      `  • ${c.name}: ${c.count} stitches · ${len(c.filamentMM)} (${c.filamentG.toFixed(1)} g)`),
+  ];
   $('statsBox').textContent =
     `${st.printer}\n` +
     `${st.cols} × ${st.rows} cells  →  ${st.widthMM.toFixed(1)} × ${st.heightMM.toFixed(1)} mm\n` +
     `${st.stitchCount} stitches  ·  ${st.pauses} filament change${st.pauses === 1 ? '' : 's'}\n` +
-    st.byColor.map(c => `  • ${c.name}: ${c.count} stitches`).join('\n') + '\n' +
-    `filament ≈ ${(st.filamentMM / 1000).toFixed(2)} m (${st.filamentG.toFixed(1)} g)\n` +
+    `filament needed:\n` + colorLines.join('\n') + '\n' +
+    `total ≈ ${len(st.filamentMM)} (${st.filamentG.toFixed(1)} g)\n` +
     `print time ≈ ${Math.round(st.timeMin)} min (moves only; excludes heat-up, leveling, pauses)`;
   // native share sheet (mobile): lets you AirDrop / save / hand off the file
   try {

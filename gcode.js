@@ -49,27 +49,31 @@ class Emitter {
     this.retracted = false;
     this.filament = 0;       // total E, mm
     this.time = 0;           // seconds, moves only
+    this.tag = 'base';       // current filament: 'base' or a color group key
+    this.usage = {};         // tag -> {e: filament mm, t: seconds}
   }
   cmd(s) { this.lines.push(s); }
   comment(s) { this.lines.push('; ' + s); }
   ePerMM(h, w) { return (w * h) / FIL_AREA; }
+  _u() { return this.usage[this.tag] || (this.usage[this.tag] = { e: 0, t: 0 }); }
+  tick(dt) { this.time += dt; this._u().t += dt; }
 
   retract() {
     if (this.retracted) return;
     this.cmd(`G1 E-${RETRACT} F${RETRACT_F}`);
     this.retracted = true;
-    this.time += RETRACT / (RETRACT_F / 60);
+    this.tick(RETRACT / (RETRACT_F / 60));
   }
   unretract() {
     if (!this.retracted) return;
     this.cmd(`G1 E${RETRACT} F${RETRACT_F}`);
     this.retracted = false;
-    this.time += RETRACT / (RETRACT_F / 60);
+    this.tick(RETRACT / (RETRACT_F / 60));
   }
   setZ(z, speed = 20) {
     if (Math.abs(z - this.z) < 1e-6) return;
     this.cmd(`G1 Z${fmt(z)} F${F(speed)}`);
-    this.time += Math.abs(z - this.z) / speed;
+    this.tick(Math.abs(z - this.z) / speed);
     this.z = z;
   }
   travel(x, y, speed, preview = true) {
@@ -77,7 +81,7 @@ class Emitter {
     if (d < 1e-6) return;
     this.cmd(`G1 X${fmt(x)} Y${fmt(y)} F${F(speed)}`);
     if (preview) this.segs.push({ x1: this.x, y1: this.y, x2: x, y2: y, z: this.z, t: 't', color: null });
-    this.time += d / speed;
+    this.tick(d / speed);
     this.x = x; this.y = y;
   }
   extrude(x, y, h, w, flow, speed, color, kind) {
@@ -87,7 +91,8 @@ class Emitter {
     this.cmd(`G1 X${fmt(x)} Y${fmt(y)} E${fmt(e)} F${F(speed)}`);
     this.segs.push({ x1: this.x, y1: this.y, x2: x, y2: y, z: this.z, t: kind, color });
     this.filament += e;
-    this.time += d / speed;
+    this._u().e += e;
+    this.tick(d / speed);
     this.x = x; this.y = y;
   }
 }
@@ -171,6 +176,7 @@ export function generateGcode(design, cfg) {
   em.comment('Filament changes (M400 U1 pause — swap filament from printer screen, purge, then resume):');
   em.comment(`  mesh base: ${baseColor?.name || 'base color'}`);
   usedGroups.forEach((g, i) => em.comment(`  pause ${i + 1}: ${g.color.name} (${g.color.hex}) — ${g.cells.length} stitches`));
+  const summaryAt = em.lines.length; // per-color filament summary is spliced in here at the end
   em.cmd('');
 
   // ---- Start sequence ----
@@ -258,6 +264,7 @@ export function generateGcode(design, cfg) {
   let pauseCount = 0;
   usedGroups.forEach((group, gi) => {
     pauseCount++;
+    em.tag = `c${gi}`;
     em.comment(`--- filament change ${gi + 1}: ${group.color.name} ---`);
     em.retract();
     em.setZ(Math.min(clearanceZ + 20, P.maxZ - 1));
@@ -297,18 +304,46 @@ export function generateGcode(design, cfg) {
   em.cmd('M84');
   em.cmd('M117 Print complete');
 
-  const volume = em.filament * FIL_AREA;           // mm^3
-  const grams = volume * 1.24 / 1000;              // PLA density
+  const gramsOf = mm => mm * FIL_AREA * 1.24 / 1000; // PLA density 1.24 g/cm^3
+  const minutesOf = s => s / 60 * 1.15;              // fudge for accel
+  const baseUse = em.usage.base || { e: 0, t: 0 };
   const stats = {
     printer: P.name,
     cols, rows,
     widthMM: W, heightMM: H,
     stitchCount,
-    byColor: usedGroups.map(g => ({ name: g.color.name, hex: g.color.hex, count: g.cells.length })),
+    base: {
+      name: baseColor?.name || 'Base',
+      hex: meshHex,
+      filamentMM: baseUse.e,
+      filamentG: gramsOf(baseUse.e),
+      timeMin: minutesOf(baseUse.t),
+    },
+    byColor: usedGroups.map((g, gi) => {
+      const u = em.usage[`c${gi}`] || { e: 0, t: 0 };
+      return {
+        name: g.color.name,
+        hex: g.color.hex,
+        count: g.cells.length,
+        filamentMM: u.e,
+        filamentG: gramsOf(u.e),
+        timeMin: minutesOf(u.t),
+      };
+    }),
     pauses: pauseCount,
     filamentMM: em.filament,
-    filamentG: grams,
-    timeMin: em.time / 60 * 1.15, // fudge for accel; excludes heat-up/leveling/pauses
+    filamentG: gramsOf(em.filament),
+    timeMin: minutesOf(em.time), // excludes heat-up/leveling/pauses
   };
+
+  // splice the per-color filament summary into the file header
+  const fmtLen = mm => mm >= 1000 ? `${(mm / 1000).toFixed(2)} m` : `${Math.round(mm)} mm`;
+  const summary = [
+    `; Filament needed (${stats.filamentG.toFixed(1)} g total, ~${Math.round(stats.timeMin)} min of moves):`,
+    `;   ${stats.base.name} (mesh): ${fmtLen(stats.base.filamentMM)} (${stats.base.filamentG.toFixed(1)} g)`,
+    ...stats.byColor.map(c => `;   ${c.name}: ${fmtLen(c.filamentMM)} (${c.filamentG.toFixed(1)} g)`),
+  ];
+  em.lines.splice(summaryAt, 0, ...summary);
+
   return { gcode: em.lines.join('\n') + '\n', segs: em.segs, stats };
 }
