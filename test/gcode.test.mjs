@@ -32,7 +32,8 @@ for (const printerId of Object.keys(PRINTERS)) {
   const { gcode, segs, stats } = generateGcode(design, cfg);
 
   check('no NaN/undefined in output', !/NaN|undefined|Infinity/.test(gcode));
-  check('3 filament-change pauses', (gcode.match(/^M400 U1/gm) || []).length === 3);
+  check('3 filament changes via M600', (gcode.match(/^M600/gm) || []).length === 3);
+  check('no plain pause in M600 mode', !/^M400 U1/m.test(gcode));
   check('has heat + home + level', /M109 S220/.test(gcode) && /G28/.test(gcode) && /G29/.test(gcode));
   check('relative extrusion', /\nM83\n/.test(gcode));
   check('ends with motors off', /M84/.test(gcode));
@@ -77,7 +78,13 @@ try {
   const d = makeDesign(10, 10);
   d.cells.fill(0);
   const { gcode, stats } = generateGcode(d, { ...DEFAULT_CFG, printerId: 'a1mini' });
-  check('empty design: no pauses', !/^M400 U1/m.test(gcode) && stats.stitchCount === 0);
+  check('empty design: no pauses', !/^M600/m.test(gcode) && !/^M400 U1/m.test(gcode) && stats.stitchCount === 0);
+}
+
+// plain-pause fallback mode
+{
+  const { gcode } = generateGcode(makeDesign(28, 40), { ...DEFAULT_CFG, printerId: 'p1s', pauseMode: 'pause' });
+  check('pause mode: 3x M400 U1, no M600', (gcode.match(/^M400 U1/gm) || []).length === 3 && !/^M600/m.test(gcode));
 }
 
 // write a sample file for manual inspection

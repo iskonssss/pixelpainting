@@ -33,6 +33,7 @@ export const DEFAULT_CFG = {
   stitchFlow: 1.15,
   brimLoops: 3,         // extra first-layer outlines for adhesion
   bedLevel: true,       // emit G29 auto bed leveling
+  pauseMode: 'm600',    // 'm600': printer cuts + unloads + prompts; 'pause': M400 U1 plain pause
 };
 
 const FIL_AREA = Math.PI * 1.75 * 1.75 / 4; // 1.75 mm filament cross-section
@@ -173,7 +174,11 @@ export function generateGcode(design, cfg) {
   em.comment(`Printer: ${P.name} (bed ${P.bedX} x ${P.bedY} mm)`);
   em.comment(`Design: ${cols} x ${rows} cells @ ${pitch} mm = ${W.toFixed(1)} x ${H.toFixed(1)} mm, ${stitchCount} stitches`);
   em.comment(`Mesh layers: ${cfg.meshLayers}  Stitch layers: ${cfg.stitchLayers}  Nozzle: ${cfg.nozzleTemp}C  Bed: ${cfg.bedTemp}C`);
-  em.comment('Filament changes (M400 U1 pause — swap filament from printer screen, purge, then resume):');
+  if (cfg.pauseMode === 'pause') {
+    em.comment('Filament changes (M400 U1 pause — unload/load manually from the printer screen, then resume):');
+  } else {
+    em.comment('Filament changes (M600 — printer cuts and unloads, then prompts for the next color):');
+  }
   em.comment(`  mesh base: ${baseColor?.name || 'base color'}`);
   usedGroups.forEach((g, i) => em.comment(`  pause ${i + 1}: ${g.color.name} (${g.color.hex}) — ${g.cells.length} stitches`));
   const summaryAt = em.lines.length; // per-color filament summary is spliced in here at the end
@@ -268,9 +273,14 @@ export function generateGcode(design, cfg) {
     em.comment(`--- filament change ${gi + 1}: ${group.color.name} ---`);
     em.retract();
     em.setZ(Math.min(clearanceZ + 20, P.maxZ - 1));
-    em.travel(15, 15, cfg.speedTravel);
     em.cmd(`M117 Load ${group.color.name}`);
-    em.cmd('M400 U1 ; pause for filament change');
+    if (cfg.pauseMode === 'pause') {
+      em.travel(15, 15, cfg.speedTravel);
+      em.cmd('M400 U1 ; pause for filament change');
+    } else {
+      em.cmd('M400 ; finish pending moves');
+      em.cmd(`M600 ; filament change: cut + unload, then load ${group.color.name}`);
+    }
     purge(gi + 1);
 
     const ordered = orderCells(group.cells, em.x, em.y, pitch, x0, y0);

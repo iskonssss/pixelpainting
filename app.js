@@ -33,6 +33,7 @@ function readCfg() {
   cfg.printerId = $('printer').value;
   for (const id of cfgIds) cfg[id] = parseFloat($(id).value) || DEFAULT_CFG[id];
   cfg.bedLevel = $('bedLevel').checked;
+  cfg.pauseMode = $('pauseMode').value;
   return cfg;
 }
 

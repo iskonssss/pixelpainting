@@ -96,6 +96,12 @@
           <label>First speed (mm/s) <input type="number" id="speedFirst" min="10" max="100" value="30"></label>
           <label>Mesh speed (mm/s) <input type="number" id="speedMesh" min="10" max="200" value="60"></label>
           <label>Stitch speed (mm/s) <input type="number" id="speedStitch" min="10" max="100" value="30"></label>
+          <label>Color change
+            <select id="pauseMode">
+              <option value="m600">M600 — auto cut &amp; unload</option>
+              <option value="pause">Pause only (M400 U1)</option>
+            </select>
+          </label>
           <label class="checkbox"><input type="checkbox" id="bedLevel" checked> Bed leveling (G29)</label>
         </div>
       </details>

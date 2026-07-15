@@ -11,8 +11,10 @@ The print has two phases:
 
 1. **Mesh lattice** — a woven "plastic canvas" base printed in your base filament color.
 2. **X stitches** — two crossing diagonal lines per filled cell, printed on top of the mesh
-   in 1–4 passes for a raised, thread-like relief. Stitches are grouped by color, and the
-   printer pauses (`M400 U1`) before each color so you can swap filament.
+   in 1–4 passes for a raised, thread-like relief. Stitches are grouped by color; before each
+   color the printer runs a filament change (`M600` — it cuts and unloads automatically, then
+   prompts for the next color). A plain-pause mode (`M400 U1`) is available in Advanced
+   settings for firmware that lacks M600.
 
 ## Supported printers
 
@@ -87,9 +89,9 @@ npm run send -- --ip 192.168.1.50 --code 12345678 --serial 01P00A123456789 --sta
 1. Copy the `.gcode` file to the printer's SD card / USB storage and start it from the printer
    screen (plain G-code prints don't carry plate/AMS metadata — that's expected).
 2. The print starts with homing, bed leveling (G29, can be disabled), a prime line, then the mesh.
-3. At each **pause**, the screen shows which color to load. Unload the current filament, load the
-   next color, purge until the color runs clean, then **resume**. A short purge line is also
-   printed at the front of the bed after each swap.
+3. At each **filament change** the printer cuts and unloads on its own, then prompts you to
+   insert the next color — follow the screen, purge until the color runs clean, and it resumes.
+   A short purge line is also printed at the front of the bed after each swap.
 4. Colors always change via manual swap, so any number of colors works without an AMS.
 
 ### Notes & safety
