@@ -93,12 +93,38 @@ function updateHud() {
   const cfg = readCfg();
   const W = (state.cols * cfg.pitch).toFixed(1);
   const H = (state.rows * cfg.pitch).toFixed(1);
+  // keep the driven dimension fields in sync (unless the user is typing in one)
+  if (document.activeElement !== $('meshW')) $('meshW').value = W;
+  if (document.activeElement !== $('meshH')) $('meshH').value = H;
   let n = 0;
   for (const v of state.cells) if (v) n++;
   $('hud').textContent =
     `grid ${state.cols} × ${state.rows}  ·  ${W} × ${H} mm  ·  stitches ${n}  ·  ${PRINTERS[cfg.printerId].name}`;
   renderPaletteCounts();
 }
+
+// Width/Height are driving dimensions too: editing one rescales the cell
+// size (cells stay square, the design is preserved), the other follows.
+function setPitchClamped(p) {
+  p = Math.max(1.5, Math.min(5, p));
+  $('pitch').value = Math.round(p * 100) / 100;
+  updateHud();
+  // the edited field is still focused, so updateHud skipped it — show the
+  // actual resulting size (matters when the value was clamped)
+  $('meshW').value = (state.cols * p).toFixed(1);
+  $('meshH').value = (state.rows * p).toFixed(1);
+  scheduleSave();
+}
+$('meshW').onchange = () => {
+  const w = parseFloat($('meshW').value);
+  if (w > 0) setPitchClamped(w / state.cols);
+  else updateHud();
+};
+$('meshH').onchange = () => {
+  const h = parseFloat($('meshH').value);
+  if (h > 0) setPitchClamped(h / state.rows);
+  else updateHud();
+};
 
 // ---------- Palette UI ----------
 function renderPalette() {
