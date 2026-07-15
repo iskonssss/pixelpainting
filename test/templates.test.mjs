@@ -8,7 +8,7 @@ function check(name, cond, detail = '') {
 }
 
 const ids = TEMPLATES.map(t => t.id);
-check('30 templates total', TEMPLATES.length === 30, `got ${TEMPLATES.length}`);
+check('38 templates total', TEMPLATES.length === 38, `got ${TEMPLATES.length}`);
 check('unique ids', new Set(ids).size === ids.length);
 check('has blank + wildflowers', ids.includes('blank') && ids.includes('wildflowers'));
 

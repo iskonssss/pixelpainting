@@ -161,6 +161,23 @@ const ROCKET = [
   '.3.3.',
   '..3..',
 ];
+const ROSE = [
+  '.111.',
+  '11211',
+  '12121',
+  '11211',
+  '.111.',
+];
+const POPPY = [
+  '.111.',
+  '11211',
+  '.111.',
+];
+const TINYFLOWER = [
+  '.1.',
+  '121',
+  '.1.',
+];
 
 export const TEMPLATES = [
   {
@@ -786,6 +803,194 @@ export const TEMPLATES = [
         if (i % 2) stamp(STAR_SMALL, Math.round(fy * (rows - 3)), Math.round(fx * (cols - 3)), { 1: 3 });
         else set(Math.round(fy * (rows - 1)), Math.round(fx * (cols - 1)), 2);
       });
+      return cells;
+    },
+  },
+  {
+    id: 'roses',
+    name: 'Roses',
+    palette: [
+      { name: 'Red', hex: '#c62828' },
+      { name: 'Deep Red', hex: '#8e1a1a' },
+      { name: 'Green', hex: '#5aa73c' },
+    ],
+    build(cols, rows) {
+      const { cells, set, stamp } = make(cols, rows);
+      const mid = Math.floor(cols / 2);
+      const amp = Math.max(3, Math.floor(cols * 0.18));
+      const vine = r => mid + Math.round(amp * Math.sin(r * 0.25 + 1));
+      for (let r = 0; r < rows; r++) set(r, vine(r), 3);
+      for (let r = 2; r < rows; r += 5) { const c = vine(r); set(r, c + 1, 3); set(r - 1, c + 2, 3); }
+      for (let r = 4; r < rows; r += 7) { const c = vine(r); set(r, c - 1, 3); set(r + 1, c - 2, 3); }
+      for (let r = 3, i = 0; r + 5 < rows; r += 8, i++) {
+        const c = vine(r + 2);
+        stamp(ROSE, r, c + (i % 2 ? 2 : -6), { 1: 1, 2: 2 });
+      }
+      return cells;
+    },
+  },
+  {
+    id: 'daisies',
+    name: 'Daisies',
+    palette: [
+      { name: 'White', hex: '#eef0f4' },
+      { name: 'Yellow', hex: '#f2c230' },
+      { name: 'Green', hex: '#5aa73c' },
+    ],
+    build(cols, rows) {
+      const { cells, stamp } = make(cols, rows);
+      const spots = [[0.15, 0.06], [0.6, 0.18], [0.25, 0.35], [0.65, 0.5], [0.18, 0.62], [0.55, 0.78]];
+      spots.forEach(([fx, fy]) =>
+        stamp(FLOWER, Math.round(fy * (rows - 5)), Math.round(fx * (cols - 5)), { 1: 1, 2: 2 }));
+      const sprigs = [[0.75, 0.08], [0.1, 0.22], [0.8, 0.38], [0.12, 0.5], [0.75, 0.68], [0.3, 0.9], [0.65, 0.92]];
+      sprigs.forEach(([fx, fy]) =>
+        stamp(SPRIG, Math.round(fy * (rows - 3)), Math.round(fx * (cols - 3)), { 1: 3 }));
+      return cells;
+    },
+  },
+  {
+    id: 'lavender',
+    name: 'Lavender',
+    palette: [
+      { name: 'Purple', hex: '#7e57c2' },
+      { name: 'Green', hex: '#5aa73c' },
+    ],
+    build(cols, rows) {
+      const { cells, set } = make(cols, rows);
+      const base = rows - 3;
+      for (let x = 3, i = 0; x < cols - 2; x += 5, i++) {
+        const top = 3 + (i % 3) * 3;
+        for (let k = 0; k < 6 && top + k < base; k++) {
+          if (k % 2 === 0) set(top + k, x, 1);
+          else { set(top + k, x - 1, 1); set(top + k, x + 1, 1); }
+        }
+        for (let r = top + 6; r <= base; r++) set(r, x, 2);
+        const lm = Math.floor((top + 6 + base) / 2);
+        set(lm, x - 1, 2);
+        set(lm + 2, x + 1, 2);
+      }
+      return cells;
+    },
+  },
+  {
+    id: 'poppies',
+    name: 'Poppies',
+    palette: [
+      { name: 'Red', hex: '#c62828' },
+      { name: 'Black', hex: '#2b2b2e' },
+      { name: 'Green', hex: '#5aa73c' },
+    ],
+    build(cols, rows) {
+      const { cells, set, stamp } = make(cols, rows);
+      const spots = [[0.15, 0.08], [0.6, 0.2], [0.25, 0.38], [0.62, 0.55], [0.18, 0.68], [0.55, 0.84]];
+      spots.forEach(([fx, fy], i) => {
+        const top = Math.round(fy * (rows - 8));
+        const left = Math.round(fx * (cols - 5));
+        stamp(POPPY, top, left, { 1: 1, 2: 2 });
+        for (let k = 3; k <= 6; k++) set(top + k, left + 2, 3);
+        set(top + 5, left + (i % 2 ? 1 : 3), 3);
+      });
+      return cells;
+    },
+  },
+  {
+    id: 'daffodils',
+    name: 'Daffodils',
+    palette: [
+      { name: 'Yellow', hex: '#f2c230' },
+      { name: 'Orange', hex: '#ef7d1a' },
+      { name: 'Green', hex: '#5aa73c' },
+    ],
+    build(cols, rows) {
+      const { cells, set, stamp } = make(cols, rows);
+      const base = rows - 3;
+      const plants = [[0.25, 0.3], [0.52, 0.12], [0.78, 0.4]];
+      plants.forEach(([fx, fy]) => {
+        const x = Math.round(fx * (cols - 1));
+        const top = Math.round(fy * rows);
+        stamp(FLOWER, top, x - 2, { 1: 1, 2: 2 });
+        for (let r = top + 5; r <= base; r++) set(r, x, 3);
+        // arching leaves from the base
+        for (let k = 1; k <= 3; k++) {
+          set(base - k, x - k, 3);
+          if (k < 3) set(base - k, x + k, 3);
+        }
+      });
+      return cells;
+    },
+  },
+  {
+    id: 'forgetmenots',
+    name: 'Forget-me-nots',
+    palette: [
+      { name: 'Blue', hex: '#5a8ade' },
+      { name: 'Gold', hex: '#f2c230' },
+      { name: 'Green', hex: '#5aa73c' },
+    ],
+    build(cols, rows) {
+      const { cells, set, stamp } = make(cols, rows);
+      const bunches = [[0.15, 0.08], [0.58, 0.25], [0.2, 0.45], [0.6, 0.62], [0.25, 0.8]];
+      bunches.forEach(([fx, fy]) => {
+        const top = Math.round(fy * (rows - 7));
+        const left = Math.round(fx * (cols - 7));
+        stamp(TINYFLOWER, top, left, { 1: 1, 2: 2 });
+        stamp(TINYFLOWER, top + 1, left + 4, { 1: 1, 2: 2 });
+        stamp(TINYFLOWER, top + 4, left + 2, { 1: 1, 2: 2 });
+        set(top + 7, left + 3, 3);
+        set(top + 8, left + 2, 3);
+      });
+      return cells;
+    },
+  },
+  {
+    id: 'meadow',
+    name: 'Flower Meadow',
+    palette: [
+      { name: 'Green', hex: '#5aa73c' },
+      { name: 'Red', hex: '#c62828' },
+      { name: 'Yellow', hex: '#f2c230' },
+      { name: 'Pink', hex: '#e57fa4' },
+      { name: 'Blue', hex: '#5a8ade' },
+    ],
+    build(cols, rows) {
+      const { cells, set, stamp } = make(cols, rows);
+      const ground = rows - 3;
+      for (let c = 1; c < cols - 1; c++) {
+        if (c % 2) set(ground + 1, c, 1);
+        if (c % 3 === 0) set(ground, c, 1);
+      }
+      for (let x = 3, i = 0; x < cols - 2; x += 4, i++) {
+        const h = 5 + ((x * 7) % 9);
+        const top = Math.max(2, ground - h);
+        for (let r = top; r < ground; r++) set(r, x, 1);
+        stamp(SPRIG, top - 3, x - 1, { 1: (i % 4) + 2 });
+      }
+      return cells;
+    },
+  },
+  {
+    id: 'hydrangea',
+    name: 'Hydrangea',
+    palette: [
+      { name: 'Periwinkle', hex: '#8496d9' },
+      { name: 'Blue', hex: '#5468b8' },
+      { name: 'Green', hex: '#5aa73c' },
+    ],
+    build(cols, rows) {
+      const { cells, set } = make(cols, rows);
+      const ball = (r0, c0, rad) => {
+        for (let r = r0 - rad; r <= r0 + rad; r++) {
+          for (let c = c0 - rad; c <= c0 + rad; c++) {
+            if (Math.hypot(r - r0, c - c0) <= rad) set(r, c, (r + c) % 2 ? 1 : 2);
+          }
+        }
+        set(r0 + rad + 1, c0, 3);
+        set(r0 + rad + 2, c0 - 1, 3);
+        set(r0 + rad + 2, c0 + 1, 3);
+      };
+      ball(Math.floor(rows * 0.22), Math.floor(cols * 0.35), 4);
+      ball(Math.floor(rows * 0.5), Math.floor(cols * 0.68), 4);
+      ball(Math.floor(rows * 0.75), Math.floor(cols * 0.3), 3);
       return cells;
     },
   },
