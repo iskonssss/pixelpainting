@@ -32,8 +32,8 @@ for (const printerId of Object.keys(PRINTERS)) {
   const { gcode, segs, stats } = generateGcode(design, cfg);
 
   check('no NaN/undefined in output', !/NaN|undefined|Infinity/.test(gcode));
-  check('3 filament changes via M600', (gcode.match(/^M600/gm) || []).length === 3);
-  check('no plain pause in M600 mode', !/^M400 U1/m.test(gcode));
+  check('3 filament-change pauses (M400 U1 default)', (gcode.match(/^M400 U1/gm) || []).length === 3);
+  check('no M600 in default pause mode', !/^M600/m.test(gcode));
   check('has heat + home + level', /M109 S220/.test(gcode) && /G28/.test(gcode) && /G29/.test(gcode));
   // Bambu's G29 drops nozzle temp for probing and never restores it, so the
   // full-temp wait must come after leveling and before the first extrusion
@@ -94,10 +94,10 @@ try {
   check('empty design: no pauses', !/^M600/m.test(gcode) && !/^M400 U1/m.test(gcode) && stats.stitchCount === 0);
 }
 
-// plain-pause fallback mode
+// M600 alternative mode
 {
-  const { gcode } = generateGcode(makeDesign(28, 40), { ...DEFAULT_CFG, printerId: 'p1s', pauseMode: 'pause' });
-  check('pause mode: 3x M400 U1, no M600', (gcode.match(/^M400 U1/gm) || []).length === 3 && !/^M600/m.test(gcode));
+  const { gcode } = generateGcode(makeDesign(28, 40), { ...DEFAULT_CFG, printerId: 'p1s', pauseMode: 'm600' });
+  check('m600 mode: 3x M600, no plain pause', (gcode.match(/^M600/gm) || []).length === 3 && !/^M400 U1/m.test(gcode));
 }
 
 // write a sample file for manual inspection

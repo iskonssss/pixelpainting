@@ -33,7 +33,7 @@ export const DEFAULT_CFG = {
   stitchFlow: 1.15,
   brimLoops: 3,         // extra first-layer outlines for adhesion
   bedLevel: true,       // emit G29 auto bed leveling
-  pauseMode: 'm600',    // 'm600': printer cuts + unloads + prompts; 'pause': M400 U1 plain pause
+  pauseMode: 'pause',   // 'pause': M400 U1 (unload/load via the printer's filament menu); 'm600': firmware change routine
 };
 
 const FIL_AREA = Math.PI * 1.75 * 1.75 / 4; // 1.75 mm filament cross-section
@@ -188,10 +188,10 @@ export function generateGcode(design, cfg) {
   em.comment(`Printer: ${P.name} (bed ${P.bedX} x ${P.bedY} mm)`);
   em.comment(`Design: ${cols} x ${rows} cells @ ${pitch} mm = ${W.toFixed(1)} x ${H.toFixed(1)} mm, ${stitchCount} stitches`);
   em.comment(`Mesh layers: ${cfg.meshLayers}  Stitch layers: ${cfg.stitchLayers}  Nozzle: ${cfg.nozzleTemp}C  Bed: ${cfg.bedTemp}C`);
-  if (cfg.pauseMode === 'pause') {
-    em.comment('Filament changes (M400 U1 pause — unload/load manually from the printer screen, then resume):');
+  if (cfg.pauseMode === 'm600') {
+    em.comment('Filament changes (M600 — printer runs its filament-change routine):');
   } else {
-    em.comment('Filament changes (M600 — printer cuts and unloads, then prompts for the next color):');
+    em.comment('Filament changes (M400 U1 pause — use the printer screen\'s filament menu to unload/load, then resume):');
   }
   em.comment(`  mesh base: ${baseColor?.name || 'base color'}`);
   usedGroups.forEach((g, i) => em.comment(`  pause ${i + 1}: ${g.color.name} (${g.color.hex}) — ${g.cells.length} stitches`));

@@ -1,5 +1,5 @@
 // Service worker: cache-first app shell so the PWA works offline.
-const CACHE = 'pixelpainting-v12';
+const CACHE = 'pixelpainting-v13';
 const ASSETS = [
   './',
   'index.html',
