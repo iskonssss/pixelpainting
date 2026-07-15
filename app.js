@@ -8,6 +8,7 @@ const $ = id => document.getElementById(id);
 const state = {
   cols: 28,
   rows: 40,
+  pitch: 2.25,
   cells: new Uint8Array(28 * 40), // 0 = empty, else palette index + 1
   palette: [
     { name: 'Red', hex: '#c62828' },
@@ -104,27 +105,58 @@ function updateHud() {
   renderPaletteCounts();
 }
 
-// Width/Height are driving dimensions too: editing one rescales the cell
-// size (cells stay square, the design is preserved), the other follows.
-function setPitchClamped(p) {
-  p = Math.max(1.5, Math.min(5, p));
-  $('pitch').value = Math.round(p * 100) / 100;
-  updateHud();
-  // the edited field is still focused, so updateHud skipped it — show the
-  // actual resulting size (matters when the value was clamped)
-  $('meshW').value = (state.cols * p).toFixed(1);
-  $('meshH').value = (state.rows * p).toFixed(1);
+// Cell size and overall Width/Height are the driving dimensions; the
+// column/row count is derived from them (cols = width / cell size).
+// All grid geometry changes flow through gridChange() so a single undo
+// snapshot captures pitch + grid + cells together.
+function syncDimFields() {
+  $('meshW').value = (state.cols * state.pitch).toFixed(1);
+  $('meshH').value = (state.rows * state.pitch).toFixed(1);
+}
+function gridChange(pitch, cols, rows) {
+  pitch = Math.max(1.5, Math.min(5, pitch || state.pitch));
+  cols = Math.max(4, Math.min(120, Math.round(cols) | 0));
+  rows = Math.max(4, Math.min(200, Math.round(rows) | 0));
+  if (pitch === state.pitch && cols === state.cols && rows === state.rows) {
+    $('pitch').value = state.pitch;
+    syncDimFields();
+    return;
+  }
+  pushUndo();
+  state.pitch = pitch;
+  if (cols !== state.cols || rows !== state.rows) {
+    const next = new Uint8Array(cols * rows);
+    for (let r = 0; r < Math.min(rows, state.rows); r++) {
+      for (let c = 0; c < Math.min(cols, state.cols); c++) {
+        next[r * cols + c] = state.cells[r * state.cols + c];
+      }
+    }
+    state.cols = cols;
+    state.rows = rows;
+    state.cells = next;
+  }
+  $('pitch').value = state.pitch;
+  $('cols').value = state.cols;
+  $('rows').value = state.rows;
+  syncDimFields();
+  render();
   scheduleSave();
 }
+$('pitch').onchange = () => {
+  const p = Math.max(1.5, Math.min(5, parseFloat($('pitch').value) || state.pitch));
+  const targetW = parseFloat($('meshW').value) || state.cols * state.pitch;
+  const targetH = parseFloat($('meshH').value) || state.rows * state.pitch;
+  gridChange(p, targetW / p, targetH / p);
+};
 $('meshW').onchange = () => {
   const w = parseFloat($('meshW').value);
-  if (w > 0) setPitchClamped(w / state.cols);
-  else updateHud();
+  if (w > 0) gridChange(state.pitch, w / state.pitch, state.rows);
+  else syncDimFields();
 };
 $('meshH').onchange = () => {
   const h = parseFloat($('meshH').value);
-  if (h > 0) setPitchClamped(h / state.rows);
-  else updateHud();
+  if (h > 0) gridChange(state.pitch, state.cols, h / state.pitch);
+  else syncDimFields();
 };
 
 // ---------- Palette UI ----------
@@ -307,6 +339,7 @@ function snapshot() {
     cells: state.cells.slice(),
     cols: state.cols,
     rows: state.rows,
+    pitch: state.pitch,
     palette: state.palette.map(c => ({ ...c })),
     baseColor: { ...state.baseColor },
   };
@@ -325,6 +358,8 @@ function applySnapshot(s) {
   if (state.selected >= state.palette.length) state.selected = Math.max(0, state.palette.length - 1);
   $('cols').value = s.cols;
   $('rows').value = s.rows;
+  if (s.pitch) state.pitch = s.pitch;
+  $('pitch').value = state.pitch;
   $('baseColorName').value = state.baseColor.name;
   renderPalette();
   render();
@@ -472,28 +507,11 @@ $('generateM').onclick = () => { openSheet(false); $('generate').click(); };
 
 // ---------- Grid resize / zoom ----------
 function resizeGrid(cols, rows) {
-  cols = Math.max(4, Math.min(120, cols | 0));
-  rows = Math.max(4, Math.min(200, rows | 0));
-  if (cols === state.cols && rows === state.rows) return;
-  pushUndo();
-  const next = new Uint8Array(cols * rows);
-  for (let r = 0; r < Math.min(rows, state.rows); r++) {
-    for (let c = 0; c < Math.min(cols, state.cols); c++) {
-      next[r * cols + c] = state.cells[r * state.cols + c];
-    }
-  }
-  state.cols = cols;
-  state.rows = rows;
-  state.cells = next;
-  $('cols').value = cols;
-  $('rows').value = rows;
-  render();
-  scheduleSave();
+  gridChange(state.pitch, cols, rows);
 }
 $('cols').onchange = () => resizeGrid(parseInt($('cols').value), state.rows);
 $('rows').onchange = () => resizeGrid(state.cols, parseInt($('rows').value));
 $('zoom').oninput = () => { state.zoom = parseInt($('zoom').value); render(); };
-$('pitch').oninput = updateHud;
 $('printer').onchange = () => { updateHud(); scheduleSave(); };
 
 $('clear').onclick = () => {
@@ -504,11 +522,9 @@ $('clear').onclick = () => {
 };
 
 $('resetGrid').onclick = () => {
-  $('pitch').value = 2.25;
-  resizeGrid(28, 40); // undoable; keeps stitches that still fit
+  gridChange(2.25, 28, 40); // undoable; keeps stitches that still fit
   fitZoom();
   render();
-  scheduleSave();
 };
 
 // ---------- Templates ----------
@@ -592,7 +608,7 @@ function designJSON() {
     palette: state.palette,
     baseColor: state.baseColor,
     printerId: $('printer').value,
-    pitch: parseFloat($('pitch').value),
+    pitch: state.pitch,
   };
 }
 function loadDesignObj(d) {
@@ -605,7 +621,7 @@ function loadDesignObj(d) {
   state.selected = 0;
   $('cols').value = d.cols;
   $('rows').value = d.rows;
-  if (d.pitch) $('pitch').value = d.pitch;
+  if (d.pitch) { state.pitch = d.pitch; $('pitch').value = d.pitch; }
   if (d.printerId && PRINTERS[d.printerId]) $('printer').value = d.printerId;
   $('baseColorName').value = state.baseColor.name;
   renderPalette();
