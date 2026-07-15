@@ -185,14 +185,18 @@ export function generateGcode(design, cfg) {
   em.cmd('');
 
   // ---- Start sequence ----
+  // Note: homing/leveling comes BEFORE the final nozzle heat. Bambu's G29
+  // internally drops the nozzle to ~140C for probing and does not restore
+  // the print temperature, so waiting for full temp must happen after it.
   em.cmd('G90');
   em.cmd('M83');
   em.cmd(`M140 S${cfg.bedTemp}`);
-  em.cmd(`M104 S${cfg.nozzleTemp}`);
-  em.cmd(`M190 S${cfg.bedTemp}`);
-  em.cmd(`M109 S${cfg.nozzleTemp}`);
+  em.cmd('M104 S140 ; preheat nozzle for homing/leveling');
+  em.cmd(`M190 S${cfg.bedTemp} ; wait for bed temp`);
   em.cmd('G28 ; home');
-  if (cfg.bedLevel) em.cmd('G29 ; auto bed leveling');
+  if (cfg.bedLevel) em.cmd('G29 ; auto bed leveling (probes at reduced nozzle temp)');
+  em.cmd(`M104 S${cfg.nozzleTemp}`);
+  em.cmd(`M109 S${cfg.nozzleTemp} ; wait for full print temp before any extrusion`);
   em.cmd('M106 S0 ; part fan off for first layer');
   em.setZ(5);
 

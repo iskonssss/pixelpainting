@@ -35,6 +35,11 @@ for (const printerId of Object.keys(PRINTERS)) {
   check('3 filament changes via M600', (gcode.match(/^M600/gm) || []).length === 3);
   check('no plain pause in M600 mode', !/^M400 U1/m.test(gcode));
   check('has heat + home + level', /M109 S220/.test(gcode) && /G28/.test(gcode) && /G29/.test(gcode));
+  // Bambu's G29 drops nozzle temp for probing and never restores it, so the
+  // full-temp wait must come after leveling and before the first extrusion
+  check('waits for print temp AFTER leveling, before extruding',
+    gcode.indexOf('G29') < gcode.indexOf('M109 S220') &&
+    gcode.indexOf('M109 S220') < gcode.search(/^G1 .*E[\d.]/m));
   check('relative extrusion', /\nM83\n/.test(gcode));
   check('ends with motors off', /M84/.test(gcode));
   check('stitch count', stats.stitchCount === 28 + 16 + 1, `got ${stats.stitchCount}`);
