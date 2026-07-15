@@ -51,6 +51,14 @@ for (const printerId of Object.keys(PRINTERS)) {
   check('per-color filament sums to total', Math.abs(sumParts - stats.filamentMM) < 0.01,
     `${sumParts} vs ${stats.filamentMM}`);
   check('header has filament summary', /; Filament needed/.test(gcode));
+  // M73 progress markers drive the printer's % / time-remaining display
+  const m73 = [...gcode.matchAll(/^M73 P(\d+) R(\d+)$/gm)];
+  check('many M73 progress markers', m73.length >= 8, `got ${m73.length}`);
+  check('progress starts at 0 and ends at 100',
+    m73[0][1] === '0' && m73[m73.length - 1][1] === '100');
+  check('progress percentages non-decreasing',
+    m73.every((m, i) => i === 0 || +m[1] >= +m73[i - 1][1]));
+  check('no unresolved M73 placeholders', !/^M73$/m.test(gcode));
   check('preview has segments', segs.length > 500, `got ${segs.length}`);
 
   // all coordinates within bed

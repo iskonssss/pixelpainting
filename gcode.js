@@ -52,6 +52,20 @@ class Emitter {
     this.time = 0;           // seconds, moves only
     this.tag = 'base';       // current filament: 'base' or a color group key
     this.usage = {};         // tag -> {e: filament mm, t: seconds}
+    this.marks = [];         // progress placeholders, resolved once total time is known
+  }
+  // Drop an M73 progress marker here; the printer uses these for its % / time display.
+  progress() {
+    this.marks.push({ idx: this.lines.length, t: this.time });
+    this.lines.push('M73'); // placeholder, rewritten by finalizeProgress()
+  }
+  finalizeProgress(fudge) {
+    const total = this.time || 1;
+    for (const m of this.marks) {
+      const pct = Math.min(100, Math.round((m.t / total) * 100));
+      const remMin = Math.ceil(((total - m.t) * fudge) / 60);
+      this.lines[m.idx] = `M73 P${pct} R${remMin}`;
+    }
   }
   cmd(s) { this.lines.push(s); }
   comment(s) { this.lines.push('; ' + s); }
@@ -198,6 +212,7 @@ export function generateGcode(design, cfg) {
   em.cmd(`M104 S${cfg.nozzleTemp}`);
   em.cmd(`M109 S${cfg.nozzleTemp} ; wait for full print temp before any extrusion`);
   em.cmd('M106 S0 ; part fan off for first layer');
+  em.progress();
   em.setZ(5);
 
   // Purge slot 0 (initial prime of the base filament)
@@ -267,6 +282,7 @@ export function generateGcode(design, cfg) {
     };
     if (layer % 2 === 0) { horizontals(); verticals(); }
     else { verticals(); horizontals(); }
+    em.progress();
   }
 
   // ---- Phase 2: stitches, grouped by color ----
@@ -288,10 +304,12 @@ export function generateGcode(design, cfg) {
     purge(gi + 1);
 
     const ordered = orderCells(group.cells, em.x, em.y, pitch, x0, y0);
+    let sinceMark = 0;
     for (let layer = 0; layer < cfg.stitchLayers; layer++) {
       const z = meshTopZ + (layer + 1) * lh;
       em.comment(`--- ${group.color.name} stitches, pass ${layer + 1}/${cfg.stitchLayers} z=${fmt(z)} ---`);
       for (const cell of ordered) {
+        if (++sinceMark >= 12) { sinceMark = 0; em.progress(); }
         const cx0 = x0 + cell.c * pitch, cy0 = y0 + cell.r * pitch;
         const cx1 = cx0 + pitch, cy1 = cy0 + pitch;
         // travel above everything, plunge, draw the two diagonals
@@ -309,6 +327,7 @@ export function generateGcode(design, cfg) {
 
   // ---- End sequence ----
   em.comment('--- end ---');
+  em.cmd('M73 P100 R0');
   em.retract();
   em.setZ(Math.min(em.z + 20, P.maxZ - 1));
   em.travel(10, P.bedY - 10, cfg.speedTravel);
@@ -349,6 +368,9 @@ export function generateGcode(design, cfg) {
     filamentG: gramsOf(em.filament),
     timeMin: minutesOf(em.time), // excludes heat-up/leveling/pauses
   };
+
+  // resolve progress markers BEFORE splicing the header summary (splicing shifts line indices)
+  em.finalizeProgress(1.15);
 
   // splice the per-color filament summary into the file header
   const fmtLen = mm => mm >= 1000 ? `${(mm / 1000).toFixed(2)} m` : `${Math.round(mm)} mm`;
