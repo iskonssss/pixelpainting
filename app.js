@@ -458,6 +458,8 @@ function resizeGrid(cols, rows) {
   state.cols = cols;
   state.rows = rows;
   state.cells = next;
+  $('cols').value = cols;
+  $('rows').value = rows;
   render();
   scheduleSave();
 }
@@ -470,6 +472,14 @@ $('printer').onchange = () => { updateHud(); scheduleSave(); };
 $('clear').onclick = () => {
   pushUndo();
   state.cells.fill(0);
+  render();
+  scheduleSave();
+};
+
+$('resetGrid').onclick = () => {
+  $('pitch').value = 2.25;
+  resizeGrid(28, 40); // undoable; keeps stitches that still fit
+  fitZoom();
   render();
   scheduleSave();
 };
