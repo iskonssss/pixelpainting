@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; box-sizing: border-box; }
+  @page { size: A4; margin: 0; }
+  html, body { width: 210mm; height: 297mm; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #2d2a24;
+    background: #faf7ef;
+    padding: 11mm 12mm;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    gap: 6mm;
+    padding-bottom: 4mm;
+    border-bottom: 3px solid #c62828;
+    margin-bottom: 4.5mm;
+  }
+  .logo { flex: 0 0 auto; }
+  h1 { font-size: 24px; letter-spacing: 0.02em; }
+  .tagline { font-size: 12.5px; color: #6b6455; margin-top: 1mm; }
+  .url {
+    display: inline-block;
+    margin-top: 1.5mm;
+    background: #2d2a24;
+    color: #f5efdd;
+    padding: 1.2mm 3mm;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .intro { font-size: 12.5px; line-height: 1.45; color: #4a4438; margin-bottom: 4mm; }
+  .intro b { color: #2d2a24; }
+
+  .steps {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4mm 5mm;
+    margin-bottom: 4mm;
+  }
+  .step {
+    display: flex;
+    gap: 3mm;
+    background: #fff;
+    border: 1px solid #e5dcc6;
+    border-radius: 3mm;
+    padding: 3.5mm 4mm;
+  }
+  .num {
+    flex: 0 0 auto;
+    width: 7mm; height: 7mm;
+    border-radius: 50%;
+    background: #c62828;
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .step h2 { font-size: 13.5px; margin-bottom: 1mm; }
+  .step p { font-size: 11.5px; line-height: 1.4; color: #55503f; }
+  .step p b { color: #2d2a24; }
+
+  .pause-box {
+    background: #fdf3e3;
+    border: 1px solid #eccf9a;
+    border-left: 4px solid #f2c230;
+    border-radius: 2mm;
+    padding: 3mm 4mm;
+    margin-bottom: 4mm;
+  }
+  .pause-box h2 { font-size: 13.5px; margin-bottom: 1.2mm; }
+  .pause-box p { font-size: 11.8px; line-height: 1.45; color: #55503f; }
+
+  .need {
+    display: flex;
+    align-items: center;
+    gap: 4mm;
+    background: #fff;
+    border: 1px solid #e5dcc6;
+    border-radius: 2mm;
+    padding: 3mm 4mm;
+    font-size: 11.5px;
+    color: #55503f;
+    margin-bottom: 4mm;
+  }
+  .need b { color: #2d2a24; }
+  .need .sep { color: #c9bd9e; }
+
+  .journey {
+    display: flex;
+    align-items: stretch;
+    gap: 3mm;
+    margin-bottom: 4.5mm;
+    flex: 1;
+  }
+  .jcard {
+    flex: 1;
+    background: #fff;
+    border: 1px solid #e5dcc6;
+    border-radius: 3mm;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2.5mm;
+    padding: 4mm 3mm;
+    text-align: center;
+  }
+  .jcard span { font-size: 11.5px; font-weight: 600; color: #4a4438; }
+  .jarrow {
+    align-self: center;
+    font-size: 26px;
+    color: #c9bd9e;
+    font-weight: 700;
+  }
+  .tips {
+    display: flex;
+    gap: 4mm;
+    margin-top: auto;
+  }
+  .tip {
+    flex: 1;
+    background: #f0ead8;
+    border-radius: 2mm;
+    padding: 3mm 3.2mm;
+    font-size: 10.6px;
+    line-height: 1.4;
+    color: #55503f;
+  }
+  .tip b { display: block; color: #2d2a24; font-size: 11px; margin-bottom: 0.8mm; }
+  footer {
+    margin-top: 3.5mm;
+    padding-top: 2mm;
+    border-top: 1px solid #e0d7c0;
+    font-size: 9px;
+    color: #8d8571;
+    display: flex;
+    justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <svg class="logo" width="64" height="64" viewBox="0 0 64 64">
+    <rect width="64" height="64" rx="10" fill="#2d2a24"/>
+    <g stroke="#f1e8d0" stroke-width="1.6" opacity="0.5">
+      <line x1="14" y1="8" x2="14" y2="56"/><line x1="26" y1="8" x2="26" y2="56"/>
+      <line x1="38" y1="8" x2="38" y2="56"/><line x1="50" y1="8" x2="50" y2="56"/>
+      <line x1="8" y1="14" x2="56" y2="14"/><line x1="8" y1="26" x2="56" y2="26"/>
+      <line x1="8" y1="38" x2="56" y2="38"/><line x1="8" y1="50" x2="56" y2="50"/>
+    </g>
+    <g stroke-width="5.2" stroke-linecap="round" fill="none">
+      <path d="M17 17 L35 35 M35 17 L17 35" stroke="#c62828"/>
+      <path d="M40 40 L52 52 M52 40 L40 52" stroke="#f2c230"/>
+      <path d="M17 40 L29 52 M29 40 L17 52" stroke="#5aa73c"/>
+    </g>
+  </svg>
+  <div>
+    <h1>PixelPainting</h1>
+    <div class="tagline">Design and 3D-print your own cross-stitch bookmarks — no experience needed.</div>
+    <span class="url">iskonssss.github.io/pixelpainting</span>
+  </div>
+</header>
+
+<p class="intro">
+  PixelPainting turns a little pixel drawing into a real, printable bookmark: a soft plastic
+  “canvas” mesh with raised, embroidery-style <b>X stitches</b> in your colors. You draw, the app writes
+  the printer’s instructions (a “G-code” file), and a Bambu Lab printer does the stitching. A bookmark
+  takes about <b>15–30 minutes</b> to print and a few grams of material.
+</p>
+
+<div class="steps">
+  <div class="step"><div class="num">1</div><div>
+    <h2>Open the app — make it yours</h2>
+    <p>Visit the link above on your phone or computer. On a phone, tap <b>Share → Add to Home
+    Screen</b> and it installs like a normal app (works offline too).</p>
+  </div></div>
+
+  <div class="step"><div class="num">2</div><div>
+    <h2>Start from a template</h2>
+    <p>Tap <b>🎨 Templates</b> and pick from 38 designs — flowers, hearts, night sky, rainbows…
+    or start Blank. Everything stays editable afterwards.</p>
+  </div></div>
+
+  <div class="step"><div class="num">3</div><div>
+    <h2>Paint your design</h2>
+    <p>Each square becomes one stitch. <b>✏️ paints</b>, 🧽 erases, 🪣 fills an area, 💧 picks up a
+    color from the canvas. One finger draws; two fingers pinch to zoom. Mistake? <b>↩ Undo.</b></p>
+  </div></div>
+
+  <div class="step"><div class="num">4</div><div>
+    <h2>Choose your colors</h2>
+    <p>Tap a color swatch to swap it — pick from ready-made shades or mix your own. Each color =
+    one filament you’ll load during the print, so <b>2–4 colors</b> keeps it easy.</p>
+  </div></div>
+
+  <div class="step"><div class="num">5</div><div>
+    <h2>Generate &amp; check</h2>
+    <p>In ⚙️ Settings choose <b>your printer model</b>, then tap <b>Generate G-code</b>. You’ll see a
+    preview plus exactly <b>how much filament each color needs</b> and the print time. Tap
+    <b>Download</b> or <b>Share</b> to save the file.</p>
+  </div></div>
+
+  <div class="step"><div class="num">6</div><div>
+    <h2>Print it</h2>
+    <p>Copy the file onto the printer’s <b>SD card</b> (or send it over Wi-Fi with the included
+    helper — see the website’s guide). On the printer screen: <b>Files → your file → Print</b>.</p>
+  </div></div>
+</div>
+
+<div class="pause-box">
+  <h2>⏸ The printer will pause — that’s the magic, not a problem!</h2>
+  <p>The bookmark prints in stages: first the cream canvas mesh, then the stitches, one color at a
+  time. Before each color the printer <b>parks and waits</b>. Just unload the old filament, load the
+  next color (use the screen’s load menu and let it push material through until the new color runs
+  clean), then press <b>Resume</b>. The app tells you the color order before you start.</p>
+</div>
+
+<div class="need">
+  <b>🧺 What you’ll need:</b> a Bambu Lab printer <span class="sep">•</span> PLA filament — one spool for the canvas (cream or white) plus your stitch colors <span class="sep">•</span> an SD card or Wi-Fi <span class="sep">•</span> about half an hour
+</div>
+
+<div class="journey">
+  <div class="jcard">
+    <svg width="86" height="86" viewBox="0 0 86 86">
+      <rect width="86" height="86" rx="8" fill="#faf7ef" stroke="#e5dcc6"/>
+      <g stroke="#e8dcc0" stroke-width="1.5">
+        <line x1="22" y1="10" x2="22" y2="76"/><line x1="36" y1="10" x2="36" y2="76"/>
+        <line x1="50" y1="10" x2="50" y2="76"/><line x1="64" y1="10" x2="64" y2="76"/>
+        <line x1="10" y1="22" x2="76" y2="22"/><line x1="10" y1="36" x2="76" y2="36"/>
+        <line x1="10" y1="50" x2="76" y2="50"/><line x1="10" y1="64" x2="76" y2="64"/>
+      </g>
+      <g fill="#c62828">
+        <rect x="24" y="24" width="10" height="10" rx="1.5"/>
+        <rect x="52" y="24" width="10" height="10" rx="1.5"/>
+        <rect x="24" y="52" width="10" height="10" rx="1.5"/>
+        <rect x="52" y="52" width="10" height="10" rx="1.5"/>
+        <rect x="38" y="38" width="10" height="10" rx="1.5" fill="#f2c230"/>
+      </g>
+    </svg>
+    <span>You paint little squares</span>
+  </div>
+  <div class="jarrow">→</div>
+  <div class="jcard">
+    <svg width="86" height="86" viewBox="0 0 86 86">
+      <rect width="86" height="86" rx="8" fill="#faf7ef" stroke="#e5dcc6"/>
+      <path d="M32 12 h22 l-4 14 h-14 z" fill="#8a8f98"/>
+      <path d="M40 26 h6 l-3 8 z" fill="#5b6a7a"/>
+      <g stroke="#e0d3ae" stroke-width="2.4">
+        <line x1="14" y1="52" x2="72" y2="52"/><line x1="14" y1="62" x2="72" y2="62"/><line x1="14" y1="72" x2="72" y2="72"/>
+        <line x1="20" y1="46" x2="20" y2="78"/><line x1="30" y1="46" x2="30" y2="78"/><line x1="40" y1="46" x2="40" y2="78"/>
+        <line x1="50" y1="46" x2="50" y2="78"/><line x1="60" y1="46" x2="60" y2="78"/><line x1="70" y1="46" x2="70" y2="78"/>
+      </g>
+      <g stroke="#c62828" stroke-width="3.4" stroke-linecap="round">
+        <path d="M22 54 L28 60 M28 54 L22 60"/>
+        <path d="M42 54 L48 60 M48 54 L42 60"/>
+      </g>
+      <g stroke="#f2c230" stroke-width="3.4" stroke-linecap="round">
+        <path d="M32 64 L38 70 M38 64 L32 70"/>
+      </g>
+    </svg>
+    <span>The printer draws each stitch</span>
+  </div>
+  <div class="jarrow">→</div>
+  <div class="jcard">
+    <svg width="86" height="86" viewBox="0 0 86 86">
+      <rect width="86" height="86" rx="8" fill="#faf7ef" stroke="#e5dcc6"/>
+      <rect x="26" y="8" width="34" height="70" rx="4" fill="#f5efdd" stroke="#d9cca8"/>
+      <g stroke="#e8dcc0" stroke-width="1">
+        <line x1="32" y1="10" x2="32" y2="76"/><line x1="38" y1="10" x2="38" y2="76"/>
+        <line x1="44" y1="10" x2="44" y2="76"/><line x1="50" y1="10" x2="50" y2="76"/><line x1="56" y1="10" x2="56" y2="76"/>
+        <line x1="28" y1="16" x2="58" y2="16"/><line x1="28" y1="24" x2="58" y2="24"/>
+        <line x1="28" y1="32" x2="58" y2="32"/><line x1="28" y1="40" x2="58" y2="40"/>
+        <line x1="28" y1="48" x2="58" y2="48"/><line x1="28" y1="56" x2="58" y2="56"/>
+        <line x1="28" y1="64" x2="58" y2="64"/><line x1="28" y1="72" x2="58" y2="72"/>
+      </g>
+      <g stroke-width="2.6" stroke-linecap="round" fill="none">
+        <path d="M40 18 L46 24 M46 18 L40 24" stroke="#c62828"/>
+        <path d="M34 28 L40 34 M40 28 L34 34" stroke="#f2c230"/>
+        <path d="M46 28 L52 34 M52 28 L46 34" stroke="#f2c230"/>
+        <path d="M40 38 L46 44 M46 38 L40 44" stroke="#c62828"/>
+        <path d="M40 50 L46 56 M46 50 L40 56" stroke="#5aa73c"/>
+        <path d="M40 62 L46 68 M46 62 L40 68" stroke="#5aa73c"/>
+      </g>
+    </svg>
+    <span>…and you get a stitched bookmark</span>
+  </div>
+</div>
+
+<div class="tips">
+  <div class="tip"><b>🎛 Use PLA filament</b>The app’s standard settings are made for PLA — the
+  most common, easiest material. Any brand works.</div>
+  <div class="tip"><b>👀 Watch the first minutes</b>The first layer matters most. If it’s not
+  sticking, stop, clean the plate, and try again.</div>
+  <div class="tip"><b>🪶 Peel gently</b>The mesh is thin and flexible like fabric. Wait for the
+  bed to cool, then peel from a corner.</div>
+  <div class="tip"><b>💾 Nothing is lost</b>Designs save automatically in the app, and you can
+  export/import them as files to share with friends.</div>
+</div>
+
+<footer>
+  <span>PixelPainting — free &amp; open source</span>
+  <span>Works with Bambu Lab A1 mini · P1S · P2S · X1 Carbon · H2D</span>
+</footer>
+
+</body>
+</html>

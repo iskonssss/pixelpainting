@@ -1,5 +1,7 @@
 # PixelPainting
 
+**Live app:** https://iskonssss.github.io/pixelpainting/ · **Beginner guide (PDF):** [docs/PixelPainting-Guide.pdf](docs/PixelPainting-Guide.pdf)
+
 A browser-based G-code generator for **3D-printed cross-stitch bookmarks**, targeting
 Bambu Lab printers. Design pixel art on a grid — each filled cell becomes an embroidered-looking
 "X" stitch — and export ready-to-print G-code. No slicer, no STL: the toolpaths are generated
