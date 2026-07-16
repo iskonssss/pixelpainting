@@ -6,9 +6,11 @@ const $ = id => document.getElementById(id);
 
 // ---------- State ----------
 const state = {
-  cols: 28,
+  cols: 28,          // TOTAL grid (all tiles)
   rows: 40,
   pitch: 2.25,
+  tilesX: 1,         // 1x1 = single bookmark; >1 = mural split into tiles
+  tilesY: 1,
   cells: new Uint8Array(28 * 40), // 0 = empty, else palette index + 1
   palette: [
     { name: 'Red', hex: '#c62828' },
@@ -88,20 +90,44 @@ function render() {
       ctx.stroke();
     }
   }
+
+  // tile boundaries (each tile prints as its own bookmark)
+  if (isTiled()) {
+    ctx.setLineDash([6, 4]);
+    ctx.strokeStyle = 'rgba(198, 40, 40, 0.65)';
+    ctx.lineWidth = Math.max(1.5, px * 0.12);
+    ctx.beginPath();
+    for (let i = 1; i < state.tilesX; i++) {
+      ctx.moveTo(i * tileCols() * px, 0);
+      ctx.lineTo(i * tileCols() * px, h);
+    }
+    for (let j = 1; j < state.tilesY; j++) {
+      ctx.moveTo(0, j * tileRows() * px);
+      ctx.lineTo(w, j * tileRows() * px);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
   updateHud();
 }
 
+function tileCols() { return Math.round(state.cols / state.tilesX); }
+function tileRows() { return Math.round(state.rows / state.tilesY); }
+function isTiled() { return state.tilesX > 1 || state.tilesY > 1; }
+
 function updateHud() {
-  const cfg = readCfg();
-  const W = (state.cols * cfg.pitch).toFixed(1);
-  const H = (state.rows * cfg.pitch).toFixed(1);
+  const p = state.pitch;
+  const tW = (tileCols() * p).toFixed(1);
+  const tH = (tileRows() * p).toFixed(1);
   // keep the driven dimension fields in sync (unless the user is typing in one)
-  if (document.activeElement !== $('meshW')) $('meshW').value = W;
-  if (document.activeElement !== $('meshH')) $('meshH').value = H;
+  if (document.activeElement !== $('meshW')) $('meshW').value = tW;
+  if (document.activeElement !== $('meshH')) $('meshH').value = tH;
   let n = 0;
   for (const v of state.cells) if (v) n++;
-  $('hud').textContent =
-    `grid ${state.cols} × ${state.rows}  ·  ${W} × ${H} mm  ·  stitches ${n}  ·  ${PRINTERS[cfg.printerId].name}`;
+  const printer = PRINTERS[readCfg().printerId].name;
+  $('hud').textContent = isTiled()
+    ? `tile ${tileCols()} × ${tileRows()}  ·  ${tW} × ${tH} mm  ·  tiles ${state.tilesX} × ${state.tilesY}  ·  overall ${(state.cols * p).toFixed(0)} × ${(state.rows * p).toFixed(0)} mm  ·  stitches ${n}`
+    : `grid ${state.cols} × ${state.rows}  ·  ${tW} × ${tH} mm  ·  stitches ${n}  ·  ${printer}`;
   renderPaletteCounts();
 }
 
@@ -110,54 +136,66 @@ function updateHud() {
 // All grid geometry changes flow through gridChange() so a single undo
 // snapshot captures pitch + grid + cells together.
 function syncDimFields() {
-  $('meshW').value = (state.cols * state.pitch).toFixed(1);
-  $('meshH').value = (state.rows * state.pitch).toFixed(1);
+  $('meshW').value = (tileCols() * state.pitch).toFixed(1);
+  $('meshH').value = (tileRows() * state.pitch).toFixed(1);
 }
-function gridChange(pitch, cols, rows) {
+// cols/rows arguments are TOTAL grid sizes; they get snapped to whole tiles.
+function gridChange(pitch, cols, rows, tilesX = state.tilesX, tilesY = state.tilesY) {
   pitch = Math.max(1.5, Math.min(5, pitch || state.pitch));
-  cols = Math.max(4, Math.min(120, Math.round(cols) | 0));
-  rows = Math.max(4, Math.min(200, Math.round(rows) | 0));
-  if (pitch === state.pitch && cols === state.cols && rows === state.rows) {
-    $('pitch').value = state.pitch;
-    syncDimFields();
-    return;
-  }
-  pushUndo();
-  state.pitch = pitch;
-  if (cols !== state.cols || rows !== state.rows) {
-    const next = new Uint8Array(cols * rows);
-    for (let r = 0; r < Math.min(rows, state.rows); r++) {
-      for (let c = 0; c < Math.min(cols, state.cols); c++) {
-        next[r * cols + c] = state.cells[r * state.cols + c];
+  tilesX = Math.max(1, Math.min(4, Math.round(tilesX) || 1));
+  tilesY = Math.max(1, Math.min(4, Math.round(tilesY) || 1));
+  const tc = Math.max(4, Math.min(120, Math.round(cols / tilesX) || 4));
+  const tr = Math.max(4, Math.min(200, Math.round(rows / tilesY) || 4));
+  cols = tc * tilesX;
+  rows = tr * tilesY;
+  const same = pitch === state.pitch && cols === state.cols && rows === state.rows
+    && tilesX === state.tilesX && tilesY === state.tilesY;
+  if (!same) {
+    pushUndo();
+    state.pitch = pitch;
+    if (cols !== state.cols || rows !== state.rows) {
+      const next = new Uint8Array(cols * rows);
+      for (let r = 0; r < Math.min(rows, state.rows); r++) {
+        for (let c = 0; c < Math.min(cols, state.cols); c++) {
+          next[r * cols + c] = state.cells[r * state.cols + c];
+        }
       }
+      state.cols = cols;
+      state.rows = rows;
+      state.cells = next;
     }
-    state.cols = cols;
-    state.rows = rows;
-    state.cells = next;
+    state.tilesX = tilesX;
+    state.tilesY = tilesY;
   }
   $('pitch').value = state.pitch;
-  $('cols').value = state.cols;
-  $('rows').value = state.rows;
+  $('cols').value = tileCols();
+  $('rows').value = tileRows();
+  $('tilesX').value = state.tilesX;
+  $('tilesY').value = state.tilesY;
   syncDimFields();
   render();
   scheduleSave();
 }
 $('pitch').onchange = () => {
   const p = Math.max(1.5, Math.min(5, parseFloat($('pitch').value) || state.pitch));
-  const targetW = parseFloat($('meshW').value) || state.cols * state.pitch;
-  const targetH = parseFloat($('meshH').value) || state.rows * state.pitch;
-  gridChange(p, targetW / p, targetH / p);
+  const targetW = parseFloat($('meshW').value) || tileCols() * state.pitch;
+  const targetH = parseFloat($('meshH').value) || tileRows() * state.pitch;
+  gridChange(p, Math.round(targetW / p) * state.tilesX, Math.round(targetH / p) * state.tilesY);
 };
 $('meshW').onchange = () => {
   const w = parseFloat($('meshW').value);
-  if (w > 0) gridChange(state.pitch, w / state.pitch, state.rows);
+  if (w > 0) gridChange(state.pitch, Math.round(w / state.pitch) * state.tilesX, state.rows);
   else syncDimFields();
 };
 $('meshH').onchange = () => {
   const h = parseFloat($('meshH').value);
-  if (h > 0) gridChange(state.pitch, state.cols, h / state.pitch);
+  if (h > 0) gridChange(state.pitch, state.cols, Math.round(h / state.pitch) * state.tilesY);
   else syncDimFields();
 };
+$('tilesX').onchange = () =>
+  gridChange(state.pitch, tileCols() * (parseInt($('tilesX').value) || 1), state.rows, parseInt($('tilesX').value) || 1, state.tilesY);
+$('tilesY').onchange = () =>
+  gridChange(state.pitch, state.cols, tileRows() * (parseInt($('tilesY').value) || 1), state.tilesX, parseInt($('tilesY').value) || 1);
 
 // ---------- Palette UI ----------
 function renderPalette() {
@@ -340,6 +378,8 @@ function snapshot() {
     cols: state.cols,
     rows: state.rows,
     pitch: state.pitch,
+    tilesX: state.tilesX,
+    tilesY: state.tilesY,
     palette: state.palette.map(c => ({ ...c })),
     baseColor: { ...state.baseColor },
   };
@@ -356,10 +396,15 @@ function applySnapshot(s) {
   state.palette = s.palette.map(c => ({ ...c }));
   state.baseColor = { ...s.baseColor };
   if (state.selected >= state.palette.length) state.selected = Math.max(0, state.palette.length - 1);
-  $('cols').value = s.cols;
-  $('rows').value = s.rows;
   if (s.pitch) state.pitch = s.pitch;
+  state.tilesX = s.tilesX || 1;
+  state.tilesY = s.tilesY || 1;
+  $('cols').value = tileCols();
+  $('rows').value = tileRows();
+  $('tilesX').value = state.tilesX;
+  $('tilesY').value = state.tilesY;
   $('pitch').value = state.pitch;
+  syncDimFields();
   $('baseColorName').value = state.baseColor.name;
   renderPalette();
   render();
@@ -506,11 +551,10 @@ $('sheetBackdrop').onclick = () => openSheet(false);
 $('generateM').onclick = () => { openSheet(false); $('generate').click(); };
 
 // ---------- Grid resize / zoom ----------
-function resizeGrid(cols, rows) {
-  gridChange(state.pitch, cols, rows);
-}
-$('cols').onchange = () => resizeGrid(parseInt($('cols').value), state.rows);
-$('rows').onchange = () => resizeGrid(state.cols, parseInt($('rows').value));
+$('cols').onchange = () =>
+  gridChange(state.pitch, (parseInt($('cols').value) || 4) * state.tilesX, state.rows);
+$('rows').onchange = () =>
+  gridChange(state.pitch, state.cols, (parseInt($('rows').value) || 4) * state.tilesY);
 $('zoom').oninput = () => { state.zoom = parseInt($('zoom').value); render(); };
 $('printer').onchange = () => { updateHud(); scheduleSave(); };
 
@@ -522,7 +566,7 @@ $('clear').onclick = () => {
 };
 
 $('resetGrid').onclick = () => {
-  gridChange(2.25, 28, 40); // undoable; keeps stitches that still fit
+  gridChange(2.25, 28, 40, 1, 1); // undoable; keeps stitches that still fit
   fitZoom();
   render();
 };
@@ -601,7 +645,7 @@ $('closeTemplatesB').onclick = () => $('templatesDlg').close();
 // ---------- Save / load ----------
 function designJSON() {
   return {
-    version: 1,
+    version: 2,
     cols: state.cols,
     rows: state.rows,
     cells: Array.from(state.cells),
@@ -609,6 +653,8 @@ function designJSON() {
     baseColor: state.baseColor,
     printerId: $('printer').value,
     pitch: state.pitch,
+    tilesX: state.tilesX,
+    tilesY: state.tilesY,
   };
 }
 function loadDesignObj(d) {
@@ -622,6 +668,13 @@ function loadDesignObj(d) {
   $('cols').value = d.cols;
   $('rows').value = d.rows;
   if (d.pitch) { state.pitch = d.pitch; $('pitch').value = d.pitch; }
+  state.tilesX = d.tilesX || 1;
+  state.tilesY = d.tilesY || 1;
+  $('tilesX').value = state.tilesX;
+  $('tilesY').value = state.tilesY;
+  $('cols').value = tileCols();
+  $('rows').value = tileRows();
+  syncDimFields();
   if (d.printerId && PRINTERS[d.printerId]) $('printer').value = d.printerId;
   $('baseColorName').value = state.baseColor.name;
   renderPalette();
@@ -662,22 +715,55 @@ function downloadBlob(blob, name) {
 
 // ---------- Generate + preview ----------
 let previewLayers = [];
+let tileResults = [];   // [{i, j, res}] — one per tile, row-major
+let currentTile = 0;
 
 $('generate').onclick = () => {
   const cfg = readCfg();
-  const design = {
-    cols: state.cols,
-    rows: state.rows,
-    cells: state.cells,
-    palette: state.palette,
-    baseColor: state.baseColor,
-  };
+  const tc = tileCols(), tr = tileRows();
+  const results = [];
   try {
-    lastResult = generateGcode(design, cfg);
+    for (let j = 0; j < state.tilesY; j++) {
+      for (let i = 0; i < state.tilesX; i++) {
+        const cells = new Uint8Array(tc * tr);
+        for (let r = 0; r < tr; r++) {
+          for (let c = 0; c < tc; c++) {
+            cells[r * tc + c] = state.cells[(j * tr + r) * state.cols + (i * tc + c)];
+          }
+        }
+        const design = { cols: tc, rows: tr, cells, palette: state.palette, baseColor: state.baseColor };
+        results.push({ i, j, res: generateGcode(design, cfg) });
+      }
+    }
   } catch (err) {
     alert(err.message);
     return;
   }
+  tileResults = results;
+  buildTileTabs();
+  showTile(0);
+  $('previewDlg').showModal();
+};
+
+function buildTileTabs() {
+  const tabs = $('tileTabs');
+  tabs.innerHTML = '';
+  tabs.hidden = tileResults.length <= 1;
+  if (tabs.hidden) return;
+  tileResults.forEach((t, k) => {
+    const b = document.createElement('button');
+    b.className = 'small';
+    b.textContent = `Row ${t.j + 1} · Col ${t.i + 1}`;
+    b.onclick = () => showTile(k);
+    tabs.appendChild(b);
+  });
+}
+
+function showTile(k) {
+  currentTile = k;
+  lastResult = tileResults[k].res;
+  [...$('tileTabs').children].forEach((b, idx) => b.classList.toggle('active', idx === k));
+
   // group preview segments by z; only extrusion moves define layers,
   // travel moves attach to the layer of the last extrusion before them
   const byZ = new Map();
@@ -699,6 +785,7 @@ $('generate').onclick = () => {
     .map(([z, segs]) => ({ z: parseFloat(z), segs }));
   $('layerSlider').max = previewLayers.length - 1;
   $('layerSlider').value = previewLayers.length - 1;
+
   const st = lastResult.stats;
   const len = mm => mm >= 1000 ? `${(mm / 1000).toFixed(2)} m` : `${Math.round(mm)} mm`;
   const colorLines = [
@@ -706,24 +793,39 @@ $('generate').onclick = () => {
     ...st.byColor.map(c =>
       `  • ${c.name}: ${c.count} stitches · ${len(c.filamentMM)} (${c.filamentG.toFixed(1)} g)`),
   ];
+  const tileLine = tileResults.length > 1
+    ? `tile row ${tileResults[k].j + 1}, col ${tileResults[k].i + 1} of ${state.tilesY} × ${state.tilesX}\n`
+    : '';
+  let allTiles = '';
+  if (tileResults.length > 1) {
+    const totMM = tileResults.reduce((s, t) => s + t.res.stats.filamentMM, 0);
+    const totG = tileResults.reduce((s, t) => s + t.res.stats.filamentG, 0);
+    const totMin = tileResults.reduce((s, t) => s + t.res.stats.timeMin, 0);
+    allTiles = `\nALL ${tileResults.length} TILES ≈ ${len(totMM)} (${totG.toFixed(1)} g) · ~${Math.round(totMin)} min`;
+  }
   $('statsBox').textContent =
+    tileLine +
     `${st.printer}\n` +
     `${st.cols} × ${st.rows} cells  →  ${st.widthMM.toFixed(1)} × ${st.heightMM.toFixed(1)} mm\n` +
     `${st.stitchCount} stitches  ·  ${st.pauses} filament change${st.pauses === 1 ? '' : 's'}\n` +
     `filament needed:\n` + colorLines.join('\n') + '\n' +
     `total ≈ ${len(st.filamentMM)} (${st.filamentG.toFixed(1)} g)\n` +
-    `print time ≈ ${Math.round(st.timeMin)} min (moves only; excludes heat-up, leveling, pauses)`;
+    `print time ≈ ${Math.round(st.timeMin)} min (moves only; excludes heat-up, leveling, pauses)` +
+    allTiles;
+
   // native share sheet (mobile): lets you AirDrop / save / hand off the file
   try {
     const f = gcodeFile();
     $('share').hidden = !(navigator.canShare && navigator.canShare({ files: [f] }));
   } catch { $('share').hidden = true; }
   drawPreview();
-  $('previewDlg').showModal();
-};
+}
 
 function gcodeName() {
-  return `bookmark_${state.cols}x${state.rows}_${$('printer').value}.gcode`;
+  const t = tileResults.length > 1
+    ? `_r${tileResults[currentTile].j + 1}c${tileResults[currentTile].i + 1}`
+    : '';
+  return `bookmark_${tileCols()}x${tileRows()}${t}_${$('printer').value}.gcode`;
 }
 function gcodeFile() {
   return new File([lastResult.gcode], gcodeName(), { type: 'text/plain' });

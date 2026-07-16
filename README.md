@@ -45,6 +45,9 @@ python3 -m http.server 8000   # or any static server
    saved/loaded as JSON.
 3. Click **Generate G-code** to see a layer-by-layer toolpath preview, filament/time estimates,
    and download the `.gcode` file.
+4. **Tiling**: set *Tiles across / Tiles down* (up to 4 × 4) to design one big picture that
+   prints as separate bookmark-sized tiles — dashed lines show the tile boundaries while you
+   paint, and Generate produces one G-code file per tile plus combined filament/time totals.
 
 ## Using it on your phone
 

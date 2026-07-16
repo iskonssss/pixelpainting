@@ -66,8 +66,10 @@
         <label>Rows <input type="number" id="rows" min="4" max="200" value="40"></label>
         <label>Cell size (mm) <input type="number" id="pitch" min="1.5" max="5" step="0.05" value="2.25"></label>
         <label>Zoom <input type="range" id="zoom" min="6" max="34" value="16"></label>
-        <label>Width (mm) <input type="number" id="meshW" min="10" step="0.1" title="Overall mesh width — sets the number of columns at the current cell size"></label>
-        <label>Height (mm) <input type="number" id="meshH" min="10" step="0.1" title="Overall mesh height — sets the number of rows at the current cell size"></label>
+        <label>Width (mm) <input type="number" id="meshW" min="10" step="0.1" title="Tile width — sets the number of columns at the current cell size"></label>
+        <label>Height (mm) <input type="number" id="meshH" min="10" step="0.1" title="Tile height — sets the number of rows at the current cell size"></label>
+        <label>Tiles across <input type="number" id="tilesX" min="1" max="4" value="1" title="Split the design into separately printed tiles that assemble into one big picture"></label>
+        <label>Tiles down <input type="number" id="tilesY" min="1" max="4" value="1"></label>
       </div>
       <div class="tool-row" style="margin-top:8px">
         <button id="resetGrid" class="small">↺ Reset grid</button>
@@ -160,6 +162,7 @@
     <h2>Toolpath preview</h2>
     <button id="closePreview" class="small">✕</button>
   </div>
+  <div id="tileTabs" class="tile-tabs" hidden></div>
   <canvas id="previewCanvas" width="520" height="640"></canvas>
   <div class="preview-controls">
     <label>Layer <input type="range" id="layerSlider" min="0" max="0" value="0"> <span id="layerLabel"></span></label>
